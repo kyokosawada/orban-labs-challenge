@@ -14,6 +14,32 @@ REJECTED_PAYLOADS = [
     pytest.param(
         {"title": "Fine", "tittle": "typo"}, "tittle", id="unrecognised-field"
     ),
+    pytest.param(
+        {"title": "Fine", "tags": [""]}, "tags", id="tag-empty"
+    ),
+    pytest.param(
+        {"title": "Fine", "tags": ["   "]}, "tags", id="tag-only-spaces"
+    ),
+    pytest.param(
+        {"title": "Fine", "tags": ["x" * 51]}, "tags", id="tag-too-long"
+    ),
+    pytest.param(
+        {"title": "Fine", "tags": ["two words"]}, "tags", id="tag-with-a-space-inside"
+    ),
+    pytest.param(
+        {"title": "Fine", "tags": ["work!"]}, "tags", id="tag-with-punctuation"
+    ),
+    pytest.param(
+        {"title": "Fine", "tags": ["work", "in/tray"]}, "tags", id="tag-with-a-slash"
+    ),
+    pytest.param(
+        {"title": "Fine", "tags": [f"tag-{index}" for index in range(21)]},
+        "tags",
+        id="more-than-twenty-tags",
+    ),
+    pytest.param(
+        {"title": "Fine", "tags": "work"}, "tags", id="tags-not-a-list"
+    ),
 ]
 
 
@@ -44,6 +70,15 @@ def test_a_field_message_reads_as_a_sentence_to_the_person_who_sent_it(client):
     assert message == "Title must not be empty once surrounding spaces are removed."
 
 
+def test_a_rejected_tag_is_named_in_the_message_so_a_long_list_is_not_a_hunt(client):
+    response = client.post(
+        "/notes", json={"title": "Fine", "tags": ["work", "in tray", "finance"]}
+    )
+
+    message = response.json()["fields"][0]["message"]
+    assert "in tray" in message
+
+
 ACCEPTED_PAYLOADS = [
     pytest.param({"title": "x"}, id="title-of-one-character"),
     pytest.param({"title": "x" * 200}, id="title-at-the-limit"),
@@ -51,6 +86,17 @@ ACCEPTED_PAYLOADS = [
     pytest.param({"title": "Fine", "body": ""}, id="body-empty"),
     pytest.param({"title": "Fine", "body": None}, id="body-null"),
     pytest.param({"title": "Fine", "body": "x" * 10_000}, id="body-at-the-limit"),
+    pytest.param({"title": "Fine", "tags": []}, id="no-tags-at-all"),
+    pytest.param({"title": "Fine", "tags": ["x" * 50]}, id="tag-at-the-limit"),
+    pytest.param({"title": "Fine", "tags": ["a-b_c9"]}, id="tag-of-every-allowed-character"),
+    pytest.param(
+        {"title": "Fine", "tags": [f"tag-{index}" for index in range(20)]},
+        id="twenty-tags",
+    ),
+    pytest.param(
+        {"title": "Fine", "tags": [f"tag-{index}" for index in range(20)] + ["TAG-0"]},
+        id="twenty-one-tags-collapsing-to-twenty",
+    ),
 ]
 
 
