@@ -102,7 +102,7 @@ export default function NotesView() {
   const [notes, setNotes] = useState<Note[] | null>(null);
   const [tagsInUse, setTagsInUse] = useState<string[]>([]);
   const [filterTag, setFilterTag] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
+  const [searchText, setSearchText] = useState("");
   const [keyword, setKeyword] = useState("");
   const [listSettled, setListSettled] = useState(false);
   const [failure, setFailure] = useState<ErrorEnvelope | null>(null);
@@ -111,25 +111,30 @@ export default function NotesView() {
   const [tags, setTags] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const loadNotes = useCallback(async () => {
-    const query = listingQuery(keyword, filterTag);
-    try {
-      const response = await fetch(`/api/notes${query}`);
-      const payload = await readJson(response);
-      if (!response.ok) {
+  const loadNotes = useCallback(
+    async (signal?: AbortSignal) => {
+      const query = listingQuery(keyword, filterTag);
+      try {
+        const response = await fetch(`/api/notes${query}`, { signal });
+        const payload = await readJson(response);
+        if (!response.ok) {
+          setNotes(null);
+          setFailure(describeFailure(response.status, payload));
+        } else {
+          setNotes(payload as Note[]);
+          setFailure(null);
+        }
+      } catch {
+        if (signal?.aborted) {
+          return;
+        }
         setNotes(null);
-        setFailure(describeFailure(response.status, payload));
-        return;
+        setFailure(NETWORK_FAILURE);
       }
-      setNotes(payload as Note[]);
-      setFailure(null);
-    } catch {
-      setNotes(null);
-      setFailure(NETWORK_FAILURE);
-    } finally {
       setListSettled(true);
-    }
-  }, [filterTag, keyword]);
+    },
+    [filterTag, keyword],
+  );
 
   const loadTagsInUse = useCallback(async () => {
     try {
@@ -147,14 +152,16 @@ export default function NotesView() {
 
   useEffect(() => {
     const settling = setTimeout(
-      () => setKeyword(search.trim()),
+      () => setKeyword(searchText.trim()),
       SEARCH_SETTLES_AFTER_MS,
     );
     return () => clearTimeout(settling);
-  }, [search]);
+  }, [searchText]);
 
   useEffect(() => {
-    void loadNotes();
+    const superseded = new AbortController();
+    void loadNotes(superseded.signal);
+    return () => superseded.abort();
   }, [loadNotes]);
 
   useEffect(() => {
@@ -283,8 +290,8 @@ export default function NotesView() {
           id="search"
           name="search"
           type="search"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
+          value={searchText}
+          onChange={(event) => setSearchText(event.target.value)}
           placeholder="A word from the note"
         />
       </div>
