@@ -7,6 +7,7 @@ type Note = {
   id: number;
   title: string;
   body: string;
+  tags: string[];
   created_at: string;
   updated_at: string;
 };
@@ -24,16 +25,27 @@ async function readJson(response: Response): Promise<unknown> {
   }
 }
 
-const FIELDS_SHOWN_BESIDE_THEIR_INPUT = ["title", "body"];
+const FIELDS_SHOWN_BESIDE_THEIR_INPUT = ["title", "body", "tags"];
+
+function inputFor(entry: FieldError): string {
+  return entry.field.split(".")[0];
+}
 
 function messageFor(failure: ErrorEnvelope, field: string): string | undefined {
-  return failure.fields?.find((entry) => entry.field === field)?.message;
+  return failure.fields?.find((entry) => inputFor(entry) === field)?.message;
 }
 
 function unattachedFields(failure: ErrorEnvelope): FieldError[] {
   return (failure.fields ?? []).filter(
-    (entry) => !FIELDS_SHOWN_BESIDE_THEIR_INPUT.includes(entry.field),
+    (entry) => !FIELDS_SHOWN_BESIDE_THEIR_INPUT.includes(inputFor(entry)),
   );
+}
+
+function tagsTyped(value: string): string[] {
+  return value
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter((tag) => tag.length > 0);
 }
 
 function formatTimestamp(value: string): string {
@@ -45,15 +57,19 @@ function formatTimestamp(value: string): string {
 
 export default function NotesView() {
   const [notes, setNotes] = useState<Note[] | null>(null);
+  const [tagsInUse, setTagsInUse] = useState<string[]>([]);
+  const [filterTag, setFilterTag] = useState<string | null>(null);
   const [listSettled, setListSettled] = useState(false);
   const [failure, setFailure] = useState<ErrorEnvelope | null>(null);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
+  const [tags, setTags] = useState("");
   const [saving, setSaving] = useState(false);
 
   const loadNotes = useCallback(async () => {
+    const query = filterTag ? `?tag=${encodeURIComponent(filterTag)}` : "";
     try {
-      const response = await fetch("/api/notes");
+      const response = await fetch(`/api/notes${query}`);
       const payload = await readJson(response);
       if (!response.ok) {
         setNotes(null);
@@ -68,11 +84,27 @@ export default function NotesView() {
     } finally {
       setListSettled(true);
     }
+  }, [filterTag]);
+
+  const loadTagsInUse = useCallback(async () => {
+    try {
+      const response = await fetch("/api/tags");
+      if (!response.ok) {
+        return;
+      }
+      setTagsInUse((await readJson(response)) as string[]);
+    } catch {
+      setTagsInUse([]);
+    }
   }, []);
 
   useEffect(() => {
     void loadNotes();
   }, [loadNotes]);
+
+  useEffect(() => {
+    void loadTagsInUse();
+  }, [loadTagsInUse]);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -81,7 +113,7 @@ export default function NotesView() {
       const response = await fetch("/api/notes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, body }),
+        body: JSON.stringify({ title, body, tags: tagsTyped(tags) }),
       });
       const payload = await readJson(response);
       if (!response.ok) {
@@ -91,7 +123,8 @@ export default function NotesView() {
       setFailure(null);
       setTitle("");
       setBody("");
-      await loadNotes();
+      setTags("");
+      await Promise.all([loadNotes(), loadTagsInUse()]);
     } catch {
       setFailure(NETWORK_FAILURE);
     } finally {
@@ -101,6 +134,7 @@ export default function NotesView() {
 
   const titleError = failure ? messageFor(failure, "title") : undefined;
   const bodyError = failure ? messageFor(failure, "body") : undefined;
+  const tagsError = failure ? messageFor(failure, "tags") : undefined;
 
   return (
     <main className="page">
@@ -159,24 +193,88 @@ export default function NotesView() {
           ) : null}
         </div>
 
+        <div className="field">
+          <label htmlFor="tags">Tags</label>
+          <input
+            id="tags"
+            name="tags"
+            value={tags}
+            onChange={(event) => setTags(event.target.value)}
+            placeholder="work, invoices"
+            aria-invalid={tagsError ? "true" : undefined}
+            aria-describedby={tagsError ? "tags-error" : "tags-hint"}
+          />
+          {tagsError ? (
+            <span className="field-error" id="tags-error">
+              {tagsError}
+            </span>
+          ) : (
+            <span className="field-hint" id="tags-hint">
+              Separate them with commas. Capitalisation is not kept.
+            </span>
+          )}
+        </div>
+
         <button type="submit" disabled={saving}>
           {saving ? "Saving..." : "Save note"}
         </button>
       </form>
 
       <h2>Your notes</h2>
+
+      {tagsInUse.length > 0 ? (
+        <div className="filters" role="group" aria-label="Filter by tag">
+          <button
+            type="button"
+            className="tag"
+            aria-pressed={filterTag === null}
+            onClick={() => setFilterTag(null)}
+          >
+            All
+          </button>
+          {tagsInUse.map((tag) => (
+            <button
+              type="button"
+              className="tag"
+              key={tag}
+              aria-pressed={filterTag === tag}
+              onClick={() => setFilterTag(filterTag === tag ? null : tag)}
+            >
+              {tag}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       {!listSettled ? (
         <p className="empty">Loading.</p>
       ) : notes === null ? (
         <p className="empty">Your notes could not be loaded.</p>
       ) : notes.length === 0 ? (
-        <p className="empty">Nothing written yet.</p>
+        <p className="empty">
+          {filterTag ? `Nothing tagged ${filterTag}.` : "Nothing written yet."}
+        </p>
       ) : (
         <ul className="notes">
           {notes.map((note) => (
             <li className="card" key={note.id}>
               <h3>{note.title}</h3>
               {note.body ? <p>{note.body}</p> : null}
+              {note.tags.length > 0 ? (
+                <div className="note-tags">
+                  {note.tags.map((tag) => (
+                    <button
+                      type="button"
+                      className="tag"
+                      key={tag}
+                      aria-pressed={filterTag === tag}
+                      onClick={() => setFilterTag(filterTag === tag ? null : tag)}
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
               <span className="timestamp">
                 Written {formatTimestamp(note.created_at)}
               </span>
