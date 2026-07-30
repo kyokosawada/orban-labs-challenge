@@ -71,10 +71,39 @@ function formatTimestamp(value: string): string {
     : parsed.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 }
 
+const SEARCH_SETTLES_AFTER_MS = 200;
+
+function listingQuery(keyword: string, tag: string | null): string {
+  const parameters = new URLSearchParams();
+  if (keyword) {
+    parameters.set("q", keyword);
+  }
+  if (tag) {
+    parameters.set("tag", tag);
+  }
+  const query = parameters.toString();
+  return query ? `?${query}` : "";
+}
+
+function nothingFound(keyword: string, tag: string | null): string {
+  if (keyword && tag) {
+    return `Nothing tagged ${tag} mentions ${keyword}.`;
+  }
+  if (keyword) {
+    return `Nothing mentions ${keyword}.`;
+  }
+  if (tag) {
+    return `Nothing tagged ${tag}.`;
+  }
+  return "Nothing written yet.";
+}
+
 export default function NotesView() {
   const [notes, setNotes] = useState<Note[] | null>(null);
   const [tagsInUse, setTagsInUse] = useState<string[]>([]);
   const [filterTag, setFilterTag] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [keyword, setKeyword] = useState("");
   const [listSettled, setListSettled] = useState(false);
   const [failure, setFailure] = useState<ErrorEnvelope | null>(null);
   const [title, setTitle] = useState("");
@@ -83,7 +112,7 @@ export default function NotesView() {
   const [saving, setSaving] = useState(false);
 
   const loadNotes = useCallback(async () => {
-    const query = filterTag ? `?tag=${encodeURIComponent(filterTag)}` : "";
+    const query = listingQuery(keyword, filterTag);
     try {
       const response = await fetch(`/api/notes${query}`);
       const payload = await readJson(response);
@@ -100,7 +129,7 @@ export default function NotesView() {
     } finally {
       setListSettled(true);
     }
-  }, [filterTag]);
+  }, [filterTag, keyword]);
 
   const loadTagsInUse = useCallback(async () => {
     try {
@@ -115,6 +144,14 @@ export default function NotesView() {
       setFailure(NETWORK_FAILURE);
     }
   }, []);
+
+  useEffect(() => {
+    const settling = setTimeout(
+      () => setKeyword(search.trim()),
+      SEARCH_SETTLES_AFTER_MS,
+    );
+    return () => clearTimeout(settling);
+  }, [search]);
 
   useEffect(() => {
     void loadNotes();
@@ -240,6 +277,18 @@ export default function NotesView() {
 
       <h2>Your notes</h2>
 
+      <div className="field search">
+        <label htmlFor="search">Search</label>
+        <input
+          id="search"
+          name="search"
+          type="search"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="A word from the note"
+        />
+      </div>
+
       {tagsInUse.length > 0 || filterTag !== null ? (
         <div className="filters" role="group" aria-label="Filter by tag">
           <TagButton
@@ -263,9 +312,7 @@ export default function NotesView() {
       ) : notes === null ? (
         <p className="empty">Your notes could not be loaded.</p>
       ) : notes.length === 0 ? (
-        <p className="empty">
-          {filterTag ? `Nothing tagged ${filterTag}.` : "Nothing written yet."}
-        </p>
+        <p className="empty">{nothingFound(keyword, filterTag)}</p>
       ) : (
         <ul className="notes">
           {notes.map((note) => (
