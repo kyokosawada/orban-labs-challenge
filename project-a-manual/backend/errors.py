@@ -3,14 +3,23 @@ import logging
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from typing_extensions import Annotated
 
 CODE_VALIDATION_ERROR = "validation_error"
 CODE_UNAUTHORIZED = "unauthorized"
 CODE_NOT_FOUND = "not_found"
 CODE_METHOD_NOT_ALLOWED = "method_not_allowed"
 CODE_INTERNAL_ERROR = "internal_error"
+
+ERROR_CODES = (
+    CODE_VALIDATION_ERROR,
+    CODE_UNAUTHORIZED,
+    CODE_NOT_FOUND,
+    CODE_METHOD_NOT_ALLOWED,
+    CODE_INTERNAL_ERROR,
+)
 
 _FRAMEWORK_FAILURES = {
     status.HTTP_401_UNAUTHORIZED: (
@@ -39,7 +48,20 @@ class FieldError(BaseModel):
 
 
 class ErrorResponse(BaseModel):
-    code: str
+    code: Annotated[
+        str,
+        Field(
+            description=(
+                "What went wrong, in a form a caller can branch on. "
+                "`validation_error` means the request was not acceptable and "
+                "`fields` says where; `unauthorized` means the key was missing "
+                "or wrong; `not_found` means there is nothing at that address; "
+                "`method_not_allowed` means the address does not take that "
+                "method; `internal_error` means the request was not completed."
+            ),
+            json_schema_extra={"enum": list(ERROR_CODES)},
+        ),
+    ]
     message: str
     fields: list[FieldError] | None = None
 

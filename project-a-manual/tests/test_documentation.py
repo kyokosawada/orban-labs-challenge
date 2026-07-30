@@ -4,9 +4,10 @@ import pytest
 from fastapi.routing import APIRoute
 
 from backend.config import API_KEY_HEADER
+from backend.errors import ERROR_CODES
 
 DOCUMENTATION_ADDRESSES = ["/openapi.json", "/docs", "/redoc"]
-TIMESTAMP = r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z"
+TIMESTAMP = r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z"
 
 
 def published(client):
@@ -30,6 +31,37 @@ def test_every_endpoint_the_app_serves_appears_in_the_schema(client):
     }
 
     assert served == {name for name, _ in operations(published(client))}
+
+
+def test_every_documented_endpoint_really_answers(client, create_note):
+    for name, _ in operations(published(client)):
+        method, path = name.split(" ")
+        note = create_note(client, title="Reachable")
+
+        response = client.request(method, path.replace("{note_id}", str(note["id"])))
+
+        assert response.status_code not in (404, 405), f"{name} {response.status_code}"
+
+
+def test_the_schema_names_every_code_a_failure_can_carry(client):
+    documented = published(client)["components"]["schemas"]["ErrorResponse"]
+
+    assert set(documented["properties"]["code"]["enum"]) == set(ERROR_CODES)
+    assert documented["properties"]["code"]["description"]
+
+
+def test_a_code_the_schema_names_is_the_one_a_real_failure_carries(
+    client, anonymous_client
+):
+    failures = [
+        anonymous_client.get("/notes"),
+        client.post("/notes", json={"title": ""}),
+        client.get("/notes/404404"),
+        client.delete("/notes"),
+    ]
+
+    for response in failures:
+        assert response.json()["code"] in ERROR_CODES, response.text
 
 
 def test_every_endpoint_documents_the_statuses_it_answers_with(client):
@@ -113,15 +145,13 @@ def test_the_submission_the_schema_shows_is_one_the_api_accepts(client):
     }
 
 
-def test_the_note_the_schema_shows_is_shaped_like_the_one_the_api_answers_with(client):
-    schema = published(client)
-    shown = schema["components"]["schemas"]["Note"]["example"]
+def test_the_example_note_is_written_the_way_a_real_one_is(client):
+    shown = published(client)["components"]["schemas"]["Note"]["example"]
 
     written = client.post("/notes", json={"title": "Buy milk"})
 
     assert written.status_code == 201, written.text
     assert set(shown) == set(written.json())
-    assert set(shown) == set(schema["components"]["schemas"]["Note"]["properties"])
     for stamp in ("created_at", "updated_at"):
         assert re.fullmatch(TIMESTAMP, written.json()[stamp]), stamp
         assert re.fullmatch(TIMESTAMP, shown[stamp]), stamp

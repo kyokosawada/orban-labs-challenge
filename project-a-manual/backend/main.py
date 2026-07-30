@@ -16,7 +16,13 @@ key, because they describe the shape of the API and carry no stored Note. ADR 00
 records why.
 
 Every failure, whatever its cause, returns the same envelope: a machine-readable
-`code`, a human-readable `message`, and an optional per-field `fields` list.
+`code`, a human-readable `message`, and an optional per-field `fields` list. The
+`ErrorResponse` schema lists every `code` and says what each one means.
+
+Two failures belong to no single endpoint and so appear under none of them: an
+address that exists nowhere answers 404 `not_found`, and an address that exists
+but does not take the method you used answers 405 `method_not_allowed`. Both
+arrive in the same envelope as the rest.
 
 Listing and searching are the same endpoint: `GET /notes` takes an optional `q` and
 an optional `tag`, and narrows by both together when both are given.

@@ -72,7 +72,7 @@ def delete_note():
 
 @pytest.fixture
 def in_storage():
-    def read(statement: str, parameters: tuple):
+    def run(statement: str, parameters: tuple):
         connection = connect(get_settings().database_path)
         try:
             with connection:
@@ -80,4 +80,4 @@ def in_storage():
         finally:
             connection.close()
 
-    return read
+    return run

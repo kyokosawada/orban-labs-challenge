@@ -127,9 +127,9 @@ With the service running:
 - http://127.0.0.1:8000/redoc is the same content laid out for reading
 - http://127.0.0.1:8000/openapi.json is the schema itself
 
-Those three answer without a key. They describe the shape of the API and carry no stored Note,
-and requiring a key would have stopped the documentation page rendering at all, since the page
-fetches its own schema from the browser. ADR 0005 records the decision.
+Those three answer without a key, because they describe the shape of the API and carry no
+stored Note. ADR 0005 records why, and why keying them would not have left you with a
+browsable API.
 
 Everything else needs the key:
 
@@ -147,8 +147,9 @@ anywhere in a title or body whatever the capitalisation, `tag` narrows to Notes 
 Tag, and given both it narrows by both. ADR 0002 says why.
 
 Every failure returns one envelope, whatever caused it: a machine-readable `code`, a
-human-readable `message`, and a `fields` list when a particular field was at fault. ADR 0003
-says why.
+human-readable `message`, and a `fields` list when a particular field was at fault. The
+`ErrorResponse` schema lists every `code` and what each means, so a client branching on one
+does not have to read the source. ADR 0003 says why there is only one shape.
 
 The published schema is the authority on request shapes, status codes and that envelope. The
 table above is orientation.
