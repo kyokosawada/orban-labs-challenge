@@ -72,21 +72,42 @@ def test_an_ipv6_loopback_destination_is_refused(client):
     assert "loopback" in reason(client, "http://[::1]:8000/admin")
 
 
-def test_a_loopback_address_carried_inside_an_ipv6_one_is_refused(client):
-    for destination in [
+@pytest.mark.parametrize(
+    "destination",
+    [
         "http://[::ffff:127.0.0.1]/admin",
         "http://[::ffff:0:127.0.0.1]/admin",
+        "http://[::127.0.0.1]/admin",
         "http://[64:ff9b::7f00:1]/admin",
-    ]:
-        assert "loopback" in reason(client, destination), destination
+    ],
+)
+def test_a_loopback_address_carried_inside_an_ipv6_one_is_refused(client, destination):
+    assert "loopback" in reason(client, destination)
+
+
+def test_a_public_ipv6_destination_is_accepted(client):
+    destination = "http://[2606:2800:220:1::1]/pricing"
+
+    assert shorten(client, destination=destination)["destination"] == destination
 
 
 def test_the_loopback_name_is_refused_without_looking_it_up(client):
     assert "loopback" in reason(client, "http://localhost:8000/admin")
 
 
+@pytest.mark.parametrize(
+    "destination", ["http://ＬＯＣＡＬＨＯＳＴ/admin", "http://127．0．0．1/admin"]
+)
+def test_a_loopback_dressed_in_wider_letters_is_refused(client, destination):
+    assert "loopback" in reason(client, destination)
+
+
 def test_a_link_local_destination_is_refused(client):
     assert "link-local" in reason(client, "http://169.254.169.254/latest/meta-data/")
+
+
+def test_a_multicast_destination_is_refused(client):
+    assert "public" in reason(client, "http://224.0.0.1/admin")
 
 
 @pytest.mark.parametrize(
@@ -116,6 +137,24 @@ def test_credentials_cannot_disguise_a_private_destination(client):
 )
 def test_an_address_not_written_in_full_is_refused(client, destination):
     assert "written in full" in reason(client, destination)
+
+
+@pytest.mark.parametrize(
+    "destination",
+    [
+        "https://example.com:99999/page",
+        "https://example.com:notaport/page",
+        "https://example.com:0/page",
+    ],
+)
+def test_a_destination_with_an_unreadable_port_is_refused(client, destination):
+    assert "port" in reason(client, destination)
+
+
+def test_a_destination_with_a_port_is_accepted(client):
+    destination = "https://example.com:8443/page"
+
+    assert shorten(client, destination=destination)["destination"] == destination
 
 
 def test_a_public_address_literal_is_accepted(client):

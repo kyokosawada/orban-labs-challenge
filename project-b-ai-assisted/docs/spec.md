@@ -170,6 +170,11 @@ Destination is private requires resolving it, so a test using a hostname would d
 on the network and on external DNS. Literal loopback and private addresses need no lookup and
 cannot flake.
 
+**One test watches below the seam on purpose.** Proving that creation makes no network request
+cannot be done from the response alone, so a single test replaces the socket layer's lookup and
+connect with something that fails loudly, then creates a Short Link. It stands in for nothing
+the application uses; it only proves the application never leaves the process.
+
 **What gets proven, at minimum:** that a created Short Link resolves to its Destination with
 the right status and location; that creation without the key is refused while resolution
 without it succeeds; that the same Destination submitted twice yields two different Short
