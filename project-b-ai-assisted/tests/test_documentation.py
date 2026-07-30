@@ -40,6 +40,15 @@ def test_the_schema_describes_the_error_envelope(anonymous_client):
         assert content["schema"]["$ref"] == ENVELOPE_REF
 
 
+def test_the_schema_describes_what_creation_accepts(anonymous_client):
+    schema = anonymous_client.get("/openapi.json").json()
+
+    submitted = schema["components"]["schemas"]["ShortLinkCreate"]
+    assert submitted["required"] == ["destination"]
+    assert "public" in submitted["properties"]["destination"]["description"]
+    assert submitted["properties"]["expires_at"]["description"]
+
+
 def test_the_schema_names_no_failure_shape_the_service_never_returns(anonymous_client):
     schema = anonymous_client.get("/openapi.json").json()
 
