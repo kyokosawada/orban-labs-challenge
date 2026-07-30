@@ -5,6 +5,7 @@ from fastapi import FastAPI
 
 from .db import initialise_database
 from .errors import register_error_handlers
+from .openapi import publish_schema
 from .routes import redirect_router, short_links_router
 
 DESCRIPTION = """
@@ -39,6 +40,7 @@ def create_app() -> FastAPI:
     register_error_handlers(app)
     app.include_router(short_links_router)
     app.include_router(redirect_router)
+    publish_schema(app)
     return app
 
 

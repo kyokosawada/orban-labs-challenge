@@ -38,3 +38,20 @@ def test_the_schema_describes_the_error_envelope(anonymous_client):
     for status_code in ("401", "422", "500", "503"):
         content = creation[status_code]["content"]["application/json"]
         assert content["schema"]["$ref"] == ENVELOPE_REF
+
+
+def test_the_schema_names_no_failure_shape_the_service_never_returns(anonymous_client):
+    schema = anonymous_client.get("/openapi.json").json()
+
+    assert "HTTPValidationError" not in schema["components"]["schemas"]
+    assert "ValidationError" not in schema["components"]["schemas"]
+    assert "422" not in schema["paths"]["/{short_code}"]["get"]["responses"]
+
+
+def test_the_schema_gives_the_listing_no_status_it_cannot_answer(anonymous_client):
+    schema = anonymous_client.get("/openapi.json").json()
+
+    listing = schema["paths"]["/short-links"]["get"]["responses"]
+    assert set(listing) == {"200", "401", "500"}
+    creation = schema["paths"]["/short-links"]["post"]["responses"]
+    assert set(creation) == {"201", "401", "422", "500", "503"}

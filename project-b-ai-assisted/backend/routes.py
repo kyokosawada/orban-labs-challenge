@@ -25,10 +25,11 @@ short_links_router = APIRouter(
     tags=["short links"],
     dependencies=[Depends(require_api_key)],
     responses={
-        status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse},
-        status.HTTP_422_UNPROCESSABLE_ENTITY: {"model": ErrorResponse},
+        status.HTTP_401_UNAUTHORIZED: {
+            "description": "The X-API-Key header was missing or wrong.",
+            "model": ErrorResponse,
+        },
         status.HTTP_500_INTERNAL_SERVER_ERROR: {"model": ErrorResponse},
-        status.HTTP_503_SERVICE_UNAVAILABLE: {"model": ErrorResponse},
     },
 )
 
@@ -57,6 +58,20 @@ def _require_a_future_expiry(expires_at: datetime | None, now: datetime) -> None
     status_code=status.HTTP_201_CREATED,
     response_model=ShortLink,
     summary="Mint a Short Link for a Destination",
+    description=(
+        "Submitting a Destination that already has a Short Code mints another "
+        "one, so the two Short Links count their Clicks apart."
+    ),
+    responses={
+        status.HTTP_422_UNPROCESSABLE_ENTITY: {
+            "description": "The request was not accepted, with a reason per field.",
+            "model": ErrorResponse,
+        },
+        status.HTTP_503_SERVICE_UNAVAILABLE: {
+            "description": "No free Short Code was found. The request can be retried.",
+            "model": ErrorResponse,
+        },
+    },
 )
 def create_short_link(
     payload: ShortLinkCreate,
