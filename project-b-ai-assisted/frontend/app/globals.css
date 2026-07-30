@@ -115,6 +115,11 @@ input[aria-invalid="true"]:focus-visible {
   color: var(--danger);
 }
 
+.field-hint {
+  font-size: 0.8125rem;
+  color: var(--ink-soft);
+}
+
 button {
   font: inherit;
   font-weight: 600;
@@ -200,7 +205,8 @@ h2 {
   overflow-wrap: anywhere;
 }
 
-.destination {
+.destination,
+.expiry {
   margin: 0.75rem 0 0;
   padding-top: 0.75rem;
   border-top: 1px solid var(--line);
@@ -209,7 +215,8 @@ h2 {
   overflow-wrap: anywhere;
 }
 
-.destination-label {
+.destination-label,
+.expiry-label {
   display: block;
   font-size: 0.75rem;
   font-weight: 600;

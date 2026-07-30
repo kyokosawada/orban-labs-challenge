@@ -7,7 +7,10 @@ type ShortLink = {
   short_code: string;
   destination: string;
   created_at: string;
+  expires_at: string | null;
 };
+
+const ATTACHED_FIELDS = new Set(["destination", "expires_at"]);
 
 const NETWORK_FAILURE: ErrorEnvelope = {
   code: "network_error",
@@ -32,7 +35,22 @@ function messageFor(failure: ErrorEnvelope, field: string): string | undefined {
 }
 
 function unattachedFields(failure: ErrorEnvelope): FieldError[] {
-  return (failure.fields ?? []).filter((entry) => entry.field !== "destination");
+  return (failure.fields ?? []).filter((entry) => !ATTACHED_FIELDS.has(entry.field));
+}
+
+function expiryPayload(entered: string): { expires_at?: string } {
+  if (entered === "") {
+    return {};
+  }
+  const chosen = new Date(entered);
+  return {
+    expires_at: Number.isNaN(chosen.getTime()) ? entered : chosen.toISOString(),
+  };
+}
+
+function readableMoment(value: string): string {
+  const moment = new Date(value);
+  return Number.isNaN(moment.getTime()) ? value : moment.toLocaleString();
 }
 
 export default function ShortenView({
@@ -41,6 +59,7 @@ export default function ShortenView({
   publicBaseUrl: string;
 }) {
   const [destination, setDestination] = useState("");
+  const [expiry, setExpiry] = useState("");
   const [shortLink, setShortLink] = useState<ShortLink | null>(null);
   const [failure, setFailure] = useState<ErrorEnvelope | null>(null);
   const [shortening, setShortening] = useState(false);
@@ -56,7 +75,7 @@ export default function ShortenView({
       const response = await fetch("/api/short-links", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ destination }),
+        body: JSON.stringify({ destination, ...expiryPayload(expiry) }),
       });
       const payload = await readJson(response);
       if (!response.ok) {
@@ -67,6 +86,7 @@ export default function ShortenView({
       setShortLink(payload as ShortLink);
       setFailure(null);
       setDestination("");
+      setExpiry("");
     } catch {
       setShortLink(null);
       setFailure(NETWORK_FAILURE);
@@ -90,6 +110,7 @@ export default function ShortenView({
   }
 
   const destinationError = failure ? messageFor(failure, "destination") : undefined;
+  const expiryError = failure ? messageFor(failure, "expires_at") : undefined;
 
   return (
     <main className="page">
@@ -138,6 +159,28 @@ export default function ShortenView({
           ) : null}
         </div>
 
+        <div className="field">
+          <label htmlFor="expires-at">Expiry</label>
+          <input
+            id="expires-at"
+            name="expires-at"
+            type="datetime-local"
+            value={expiry}
+            onChange={(event) => setExpiry(event.target.value)}
+            aria-invalid={expiryError ? "true" : undefined}
+            aria-describedby={expiryError ? "expiry-error" : "expiry-hint"}
+          />
+          {expiryError ? (
+            <span className="field-error" id="expiry-error">
+              {expiryError}
+            </span>
+          ) : (
+            <span className="field-hint" id="expiry-hint">
+              Optional. Leave it empty and the link keeps working indefinitely.
+            </span>
+          )}
+        </div>
+
         <button type="submit" disabled={shortening || destination.trim() === ""}>
           {shortening ? "Shortening..." : "Shorten"}
         </button>
@@ -163,6 +206,12 @@ export default function ShortenView({
             <span className="destination-label">Goes to</span>
             {shortLink.destination}
           </p>
+          {shortLink.expires_at ? (
+            <p className="expiry">
+              <span className="expiry-label">Stops working</span>
+              {readableMoment(shortLink.expires_at)}
+            </p>
+          ) : null}
         </section>
       ) : null}
     </main>
