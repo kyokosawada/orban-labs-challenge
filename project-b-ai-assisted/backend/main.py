@@ -5,6 +5,7 @@ from fastapi import FastAPI
 
 from .db import initialise_database
 from .errors import register_error_handlers
+from .routes import short_links_router
 
 DESCRIPTION = """
 A store that trades a Destination for a Short Code.
@@ -33,6 +34,7 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
     register_error_handlers(app)
+    app.include_router(short_links_router)
     return app
 
 
