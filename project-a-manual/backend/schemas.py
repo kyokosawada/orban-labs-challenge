@@ -75,7 +75,16 @@ def _normalised_tags(values: list[str]) -> list[str]:
 
 
 class NoteContent(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "example": {
+                "title": "Chase the Fenwick invoice",
+                "body": "Sent 3 March, still unpaid.",
+                "tags": ["work", "invoices"],
+            }
+        },
+    )
 
     title: Annotated[str, AfterValidator(_trimmed_title)]
     body: Annotated[
@@ -87,6 +96,19 @@ class NoteContent(BaseModel):
 
 
 class Note(BaseModel):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "id": 1,
+                "title": "Chase the Fenwick invoice",
+                "body": "Sent 3 March, still unpaid.",
+                "tags": ["invoices", "work"],
+                "created_at": "2026-03-17T09:14:02.481+00:00",
+                "updated_at": "2026-03-19T16:02:55.107+00:00",
+            }
+        }
+    )
+
     id: int
     title: str
     body: str

@@ -14,13 +14,18 @@ Responses = dict[int | str, dict[str, Any]]
 
 FAILURE_RESPONSES: Responses = {
     status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse},
-    status.HTTP_422_UNPROCESSABLE_ENTITY: {"model": ErrorResponse},
     status.HTTP_500_INTERNAL_SERVER_ERROR: {"model": ErrorResponse},
+}
+
+NOT_ACCEPTED_RESPONSE: Responses = {
+    status.HTTP_422_UNPROCESSABLE_ENTITY: {"model": ErrorResponse}
 }
 
 NOT_FOUND_RESPONSE: Responses = {
     status.HTTP_404_NOT_FOUND: {"model": ErrorResponse}
 }
+
+ONE_NOTE_RESPONSES: Responses = NOT_ACCEPTED_RESPONSE | NOT_FOUND_RESPONSE
 
 NO_SUCH_NOTE = "There is no Note with that identifier."
 
@@ -39,39 +44,7 @@ tags_router = _authenticated_router("/tags", "tags")
 
 Connection = Annotated[sqlite3.Connection, Depends(get_connection)]
 
-
-@router.post(
-    "",
-    status_code=status.HTTP_201_CREATED,
-    response_model=Note,
-    summary="Write a Note",
-)
-def create_note(payload: NoteContent, connection: Connection) -> Note:
-    return repository.create_note(
-        connection, payload.title, payload.body, payload.tags
-    )
-
-
-@router.put(
-    "/{note_id}",
-    response_model=Note,
-    summary="Change a Note, replacing its Tags",
-    responses={status.HTTP_404_NOT_FOUND: {"model": ErrorResponse}},
-)
-def replace_note(
-    note_id: int, payload: NoteContent, connection: Connection
-) -> Note:
-    note = repository.replace_note(
-        connection, note_id, payload.title, payload.body, payload.tags
-    )
-    if note is None:
-        raise ApiError(
-            status.HTTP_404_NOT_FOUND,
-            CODE_NOT_FOUND,
-            f"There is no Note with id {note_id}.",
-        )
-    return note
-
+NoteId = Annotated[int, Path(description="The identifier of the Note.")]
 
 TagQuery = Annotated[
     TagFilter,
@@ -89,18 +62,50 @@ KeywordQuery = Annotated[
 ]
 
 
+@router.post(
+    "",
+    status_code=status.HTTP_201_CREATED,
+    response_model=Note,
+    summary="Write a Note",
+    responses=NOT_ACCEPTED_RESPONSE,
+)
+def create_note(payload: NoteContent, connection: Connection) -> Note:
+    return repository.create_note(
+        connection, payload.title, payload.body, payload.tags
+    )
+
+
+@router.put(
+    "/{note_id}",
+    response_model=Note,
+    summary="Change a Note, replacing its Tags",
+    responses=ONE_NOTE_RESPONSES,
+)
+def replace_note(
+    note_id: NoteId, payload: NoteContent, connection: Connection
+) -> Note:
+    note = repository.replace_note(
+        connection, note_id, payload.title, payload.body, payload.tags
+    )
+    if note is None:
+        raise ApiError(
+            status.HTTP_404_NOT_FOUND,
+            CODE_NOT_FOUND,
+            f"There is no Note with id {note_id}.",
+        )
+    return note
+
+
 @router.get(
     "",
     response_model=list[Note],
     summary="List Notes, most recently changed first",
+    responses=NOT_ACCEPTED_RESPONSE,
 )
 def list_notes(
     connection: Connection, q: KeywordQuery = None, tag: TagQuery = None
 ) -> list[Note]:
     return repository.list_notes(connection, tag=tag, keyword=q)
-
-
-NoteId = Annotated[int, Path(description="The identifier of the Note.")]
 
 
 def _no_such_note() -> ApiError:
@@ -111,7 +116,7 @@ def _no_such_note() -> ApiError:
     "/{note_id}",
     response_model=Note,
     summary="Read one Note",
-    responses=NOT_FOUND_RESPONSE,
+    responses=ONE_NOTE_RESPONSES,
 )
 def read_note(note_id: NoteId, connection: Connection) -> Note:
     note = repository.read_note(connection, note_id)
@@ -124,7 +129,7 @@ def read_note(note_id: NoteId, connection: Connection) -> Note:
     "/{note_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete a Note",
-    responses=NOT_FOUND_RESPONSE,
+    responses=ONE_NOTE_RESPONSES,
 )
 def delete_note(note_id: NoteId, connection: Connection) -> None:
     if not repository.delete_note(connection, note_id):
