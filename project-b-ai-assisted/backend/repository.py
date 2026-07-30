@@ -6,7 +6,7 @@ from .schemas import ShortLink
 
 SHORT_CODE_ATTEMPTS = 5
 
-_SHORT_LINK_COLUMNS = "short_code, destination, created_at, expires_at"
+_SHORT_LINK_COLUMNS = "short_code, destination, created_at, expires_at, clicks"
 
 _INSERT_SHORT_LINK = f"""
     INSERT INTO short_links (short_code, destination, created_at, expires_at)
@@ -26,6 +26,12 @@ _SELECT_RESOLVABLE_BY_SHORT_CODE = f"""
       AND (expires_at IS NULL OR expires_at > ?)
 """
 
+_SELECT_ALL = f"""
+    SELECT {_SHORT_LINK_COLUMNS}
+    FROM short_links
+    ORDER BY id DESC
+"""
+
 
 def _stored_moment(value: datetime | None) -> str | None:
     if value is None:
@@ -39,6 +45,7 @@ def _to_short_link(row: sqlite3.Row) -> ShortLink:
         destination=row["destination"],
         created_at=row["created_at"],
         expires_at=row["expires_at"],
+        clicks=row["clicks"],
     )
 
 
@@ -76,3 +83,7 @@ def find_resolvable_short_link(
         _SELECT_RESOLVABLE_BY_SHORT_CODE, (short_code, _stored_moment(now))
     ).fetchone()
     return _to_short_link(row) if row is not None else None
+
+
+def list_short_links(connection: sqlite3.Connection) -> list[ShortLink]:
+    return [_to_short_link(row) for row in connection.execute(_SELECT_ALL)]

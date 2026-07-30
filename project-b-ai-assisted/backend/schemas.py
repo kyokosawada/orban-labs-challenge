@@ -1,11 +1,17 @@
 from datetime import datetime
 
-from pydantic import AfterValidator, AwareDatetime, BaseModel, ConfigDict
+from pydantic import AfterValidator, AwareDatetime, BaseModel, ConfigDict, Field
 from typing_extensions import Annotated
 
 from .destinations import validate_destination
 
 DESTINATION_MAX_LENGTH = 2048
+
+CLICKS_DESCRIPTION = (
+    "How many requests for this Short Code resolved to its Destination. This "
+    "counts requests, not people: an automated preview fetch by a chat "
+    "application counts, and one person following the link twice counts twice."
+)
 
 
 def _trimmed_destination(value: str) -> str:
@@ -38,3 +44,4 @@ class ShortLink(BaseModel):
     destination: str
     created_at: datetime
     expires_at: datetime | None
+    clicks: Annotated[int, Field(description=CLICKS_DESCRIPTION)]

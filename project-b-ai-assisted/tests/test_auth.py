@@ -21,3 +21,19 @@ def test_creating_a_short_link_with_the_wrong_key_is_refused(anonymous_client):
 
     assert response.status_code == 401
     assert response.json()["code"] == "unauthorized"
+
+
+def test_reading_the_short_links_without_a_key_is_refused(anonymous_client):
+    response = anonymous_client.get("/short-links")
+
+    assert response.status_code == 401
+    assert response.json()["code"] == "unauthorized"
+
+
+def test_reading_the_short_links_with_the_wrong_key_is_refused(anonymous_client):
+    response = anonymous_client.get(
+        "/short-links", headers={API_KEY_HEADER: "not-the-key"}
+    )
+
+    assert response.status_code == 401
+    assert response.json()["code"] == "unauthorized"

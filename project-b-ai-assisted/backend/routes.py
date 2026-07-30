@@ -82,6 +82,19 @@ def create_short_link(
         ) from exhausted
 
 
+@short_links_router.get(
+    "",
+    response_model=list[ShortLink],
+    summary="List every Short Link with the Clicks it has taken",
+    description=(
+        "Newest first. A Click is one request for a Short Code that resolved, so "
+        "the counts report requests rather than people."
+    ),
+)
+def list_short_links(connection: Connection) -> list[ShortLink]:
+    return repository.list_short_links(connection)
+
+
 redirect_router = APIRouter(tags=["redirect"])
 
 
