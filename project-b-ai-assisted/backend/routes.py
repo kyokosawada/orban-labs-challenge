@@ -105,7 +105,10 @@ redirect_router = APIRouter(tags=["redirect"])
     summary="Follow a Short Link to its Destination",
     responses={
         status.HTTP_302_FOUND: {
-            "description": "The Destination is in the Location header.",
+            "description": (
+                "The Destination is in the Location header, and the request "
+                "counted as a Click."
+            ),
             "content": None,
         },
         status.HTTP_404_NOT_FOUND: {
@@ -117,7 +120,7 @@ redirect_router = APIRouter(tags=["redirect"])
 def follow_short_link(
     short_code: str, connection: Connection, now: ClockSource
 ) -> Response:
-    short_link = repository.find_resolvable_short_link(connection, short_code, now())
+    short_link = repository.resolve_short_link(connection, short_code, now())
     if short_link is None:
         return PlainTextResponse(
             "No Short Link here.", status_code=status.HTTP_404_NOT_FOUND
