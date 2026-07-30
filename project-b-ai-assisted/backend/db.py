@@ -10,7 +10,8 @@ SCHEMA_STATEMENTS = (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         short_code TEXT NOT NULL UNIQUE,
         destination TEXT NOT NULL,
-        created_at TEXT NOT NULL
+        created_at TEXT NOT NULL,
+        expires_at TEXT
     )
     """,
 )

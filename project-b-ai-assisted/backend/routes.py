@@ -1,4 +1,5 @@
 import sqlite3
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, Response, status
 from fastapi.responses import PlainTextResponse, RedirectResponse
@@ -6,9 +7,16 @@ from typing_extensions import Annotated
 
 from . import repository
 from .auth import require_api_key
+from .clock import Clock, clock
 from .codes import ShortCodeSource, short_code_source
 from .db import get_connection
-from .errors import CODE_SHORT_CODE_UNAVAILABLE, ApiError, ErrorResponse
+from .errors import (
+    CODE_SHORT_CODE_UNAVAILABLE,
+    CODE_VALIDATION_ERROR,
+    ApiError,
+    ErrorResponse,
+    FieldError,
+)
 from .schemas import ShortLink, ShortLinkCreate
 
 short_links_router = APIRouter(
@@ -25,6 +33,22 @@ short_links_router = APIRouter(
 
 Connection = Annotated[sqlite3.Connection, Depends(get_connection)]
 CodeSource = Annotated[ShortCodeSource, Depends(short_code_source)]
+Now = Annotated[Clock, Depends(clock)]
+
+
+def _require_a_future_expiry(expires_at: datetime | None, now: datetime) -> None:
+    if expires_at is not None and expires_at <= now:
+        raise ApiError(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            CODE_VALIDATION_ERROR,
+            "The request could not be accepted.",
+            [
+                FieldError(
+                    field="expires_at",
+                    message="Expiry must be a moment in the future.",
+                )
+            ],
+        )
 
 
 @short_links_router.post(
@@ -34,11 +58,20 @@ CodeSource = Annotated[ShortCodeSource, Depends(short_code_source)]
     summary="Mint a Short Link for a Destination",
 )
 def create_short_link(
-    payload: ShortLinkCreate, connection: Connection, generate_code: CodeSource
+    payload: ShortLinkCreate,
+    connection: Connection,
+    generate_code: CodeSource,
+    now: Now,
 ) -> ShortLink:
+    minted_at = now()
+    _require_a_future_expiry(payload.expires_at, minted_at)
     try:
         return repository.create_short_link(
-            connection, payload.destination, generate_code
+            connection,
+            payload.destination,
+            generate_code,
+            minted_at,
+            payload.expires_at,
         )
     except repository.ShortCodeUnavailable as exhausted:
         raise ApiError(

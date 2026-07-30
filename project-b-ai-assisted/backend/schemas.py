@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import AfterValidator, BaseModel, ConfigDict
+from pydantic import AfterValidator, AwareDatetime, BaseModel, ConfigDict
 from typing_extensions import Annotated
 
 DESTINATION_MAX_LENGTH = 2048
@@ -24,9 +24,11 @@ class ShortLinkCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     destination: Annotated[str, AfterValidator(_trimmed_destination)]
+    expires_at: AwareDatetime | None = None
 
 
 class ShortLink(BaseModel):
     short_code: str
     destination: str
     created_at: datetime
+    expires_at: datetime | None
