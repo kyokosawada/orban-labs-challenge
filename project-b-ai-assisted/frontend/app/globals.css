@@ -224,3 +224,131 @@ h2 {
   letter-spacing: 0.06em;
   margin-bottom: 0.125rem;
 }
+
+.dashboard {
+  margin-top: 2rem;
+}
+
+.dashboard h2 {
+  margin-bottom: 0.375rem;
+}
+
+.dashboard-note {
+  margin: 0 0 1rem;
+  color: var(--ink-soft);
+  font-size: 0.8125rem;
+}
+
+.dashboard-state {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.875rem;
+}
+
+.dashboard .alert {
+  margin-bottom: 1rem;
+}
+
+.alert-note {
+  margin-top: 0.25rem;
+  font-weight: 400;
+  font-size: 0.875rem;
+}
+
+.short-links {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 0.875rem;
+}
+
+.short-links th,
+.short-links td {
+  padding: 0.5rem 0.75rem 0.5rem 0;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line);
+}
+
+.short-links th {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.short-links tbody tr:last-child th,
+.short-links tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.short-links td:last-child,
+.short-links th:last-child {
+  padding-right: 0;
+}
+
+.column-code {
+  width: 6.5rem;
+}
+
+.column-clicks {
+  width: 4.5rem;
+}
+
+.column-created {
+  width: 8rem;
+}
+
+.short-links th.numeric,
+.short-links td.numeric {
+  text-align: right;
+  padding-right: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.short-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--accent);
+}
+
+.destination-cell {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink-soft);
+}
+
+.created-cell {
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+@media (max-width: 34rem) {
+  .short-links {
+    table-layout: auto;
+  }
+
+  .column-code,
+  .column-clicks,
+  .column-created {
+    width: auto;
+  }
+
+  .short-links th,
+  .created-cell {
+    white-space: normal;
+  }
+
+  .short-links th,
+  .short-links td,
+  .short-links th.numeric,
+  .short-links td.numeric {
+    padding-right: 0.5rem;
+  }
+
+  .destination-cell {
+    max-width: 5.5rem;
+  }
+}

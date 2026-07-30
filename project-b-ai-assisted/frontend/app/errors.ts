@@ -9,6 +9,19 @@ export type ErrorEnvelope = {
   fields?: FieldError[];
 };
 
+export const NETWORK_FAILURE: ErrorEnvelope = {
+  code: "network_error",
+  message: "The interface could not reach its own server. Check your connection.",
+};
+
+export async function readJson(response: Response): Promise<unknown> {
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
 export function isErrorEnvelope(value: unknown): value is ErrorEnvelope {
   if (typeof value !== "object" || value === null) {
     return false;

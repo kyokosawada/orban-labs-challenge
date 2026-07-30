@@ -3,6 +3,10 @@ import { forwardToApi } from "../shortener-api";
 
 export const dynamic = "force-dynamic";
 
+export async function GET() {
+  return forwardToApi("/short-links", { method: "GET" });
+}
+
 export async function POST(request: NextRequest) {
   return forwardToApi("/short-links", {
     method: "POST",

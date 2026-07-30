@@ -1,34 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { describeFailure, type ErrorEnvelope, type FieldError } from "./errors";
-
-type ShortLink = {
-  short_code: string;
-  destination: string;
-  created_at: string;
-  expires_at: string | null;
-};
+import DashboardView from "./dashboard-view";
+import {
+  NETWORK_FAILURE,
+  describeFailure,
+  readJson,
+  type ErrorEnvelope,
+  type FieldError,
+} from "./errors";
+import type { ShortLink } from "./short-link";
 
 const ATTACHED_FIELDS = new Set(["destination", "expires_at"]);
-
-const NETWORK_FAILURE: ErrorEnvelope = {
-  code: "network_error",
-  message: "The interface could not reach its own server. Check your connection.",
-};
 
 const COPY_FAILURE: ErrorEnvelope = {
   code: "copy_failed",
   message: "Your browser would not let the page copy that. Select it and copy by hand.",
 };
-
-async function readJson(response: Response): Promise<unknown> {
-  try {
-    return await response.json();
-  } catch {
-    return null;
-  }
-}
 
 function messageFor(failure: ErrorEnvelope, field: string): string | undefined {
   return failure.fields?.find((entry) => entry.field === field)?.message;
@@ -64,6 +52,7 @@ export default function ShortenView({
   const [failure, setFailure] = useState<ErrorEnvelope | null>(null);
   const [shortening, setShortening] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [minted, setMinted] = useState(0);
 
   const shortUrl = shortLink ? `${publicBaseUrl}/${shortLink.short_code}` : null;
 
@@ -87,6 +76,7 @@ export default function ShortenView({
       setFailure(null);
       setDestination("");
       setExpiry("");
+      setMinted((count) => count + 1);
     } catch {
       setShortLink(null);
       setFailure(NETWORK_FAILURE);
@@ -218,6 +208,8 @@ export default function ShortenView({
           ) : null}
         </section>
       ) : null}
+
+      <DashboardView publicBaseUrl={publicBaseUrl} refreshSignal={minted} />
     </main>
   );
 }
