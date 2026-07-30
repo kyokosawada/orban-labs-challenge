@@ -19,10 +19,11 @@ class ShortCodeUnavailable(RuntimeError):
     pass
 
 
-_SELECT_BY_SHORT_CODE = f"""
+_SELECT_RESOLVABLE_BY_SHORT_CODE = f"""
     SELECT {_SHORT_LINK_COLUMNS}
     FROM short_links
     WHERE short_code = ?
+      AND (expires_at IS NULL OR expires_at > ?)
 """
 
 
@@ -68,8 +69,10 @@ def create_short_link(
     )
 
 
-def find_short_link(
-    connection: sqlite3.Connection, short_code: str
+def find_resolvable_short_link(
+    connection: sqlite3.Connection, short_code: str, now: datetime
 ) -> ShortLink | None:
-    row = connection.execute(_SELECT_BY_SHORT_CODE, (short_code,)).fetchone()
+    row = connection.execute(
+        _SELECT_RESOLVABLE_BY_SHORT_CODE, (short_code, _moment(now))
+    ).fetchone()
     return _to_short_link(row) if row is not None else None

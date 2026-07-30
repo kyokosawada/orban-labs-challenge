@@ -100,8 +100,8 @@ redirect_router = APIRouter(tags=["redirect"])
         },
     },
 )
-def follow_short_link(short_code: str, connection: Connection) -> Response:
-    short_link = repository.find_short_link(connection, short_code)
+def follow_short_link(short_code: str, connection: Connection, now: Now) -> Response:
+    short_link = repository.find_resolvable_short_link(connection, short_code, now())
     if short_link is None:
         return PlainTextResponse(
             "No Short Link here.", status_code=status.HTTP_404_NOT_FOUND

@@ -1,6 +1,10 @@
 from datetime import datetime, timedelta, timezone
 
+from backend.clock import clock
+from tests.test_redirect import AN_UNKNOWN_SHORT_CODE
 from tests.test_short_links import A_DESTINATION, shorten
+
+AN_HOUR = timedelta(hours=1)
 
 
 def moment(offset: timedelta) -> datetime:
@@ -12,6 +16,10 @@ def shorten_until(client, expiry, destination=A_DESTINATION):
         "/short-links",
         json={"destination": destination, "expires_at": expiry},
     )
+
+
+def wait_until(test_client, arrival: datetime) -> None:
+    test_client.app.dependency_overrides[clock] = lambda: lambda: arrival
 
 
 def test_a_short_link_can_be_created_with_an_expiry(client):
@@ -53,6 +61,72 @@ def test_an_expiry_that_is_not_a_moment_at_all_is_refused(client):
 
     assert response.status_code == 422
     assert response.json()["code"] == "validation_error"
+
+
+def test_a_short_link_resolves_right_up_to_its_expiry(client):
+    expiry = moment(AN_HOUR)
+    created = shorten_until(client, expiry.isoformat()).json()
+
+    wait_until(client, expiry - timedelta(seconds=1))
+    response = client.get(f"/{created['short_code']}")
+
+    assert response.status_code == 302
+    assert response.headers["location"] == A_DESTINATION
+
+
+def test_a_short_link_stops_resolving_at_its_expiry_moment(client):
+    expiry = moment(AN_HOUR)
+    created = shorten_until(client, expiry.isoformat()).json()
+
+    wait_until(client, expiry)
+
+    assert client.get(f"/{created['short_code']}").status_code == 404
+
+
+def test_a_short_link_past_its_expiry_no_longer_resolves(client):
+    expiry = moment(AN_HOUR)
+    created = shorten_until(client, expiry.isoformat()).json()
+
+    wait_until(client, expiry + AN_HOUR)
+    response = client.get(f"/{created['short_code']}")
+
+    assert response.status_code == 404
+    assert "location" not in response.headers
+
+
+def test_a_short_link_without_an_expiry_still_resolves_years_later(client):
+    created = shorten(client)
+
+    wait_until(client, moment(timedelta(days=3650)))
+    response = client.get(f"/{created['short_code']}")
+
+    assert response.status_code == 302
+    assert response.headers["location"] == A_DESTINATION
+
+
+def test_an_expired_short_code_answers_exactly_as_one_never_created(client):
+    expiry = moment(AN_HOUR)
+    created = shorten_until(client, expiry.isoformat()).json()
+    wait_until(client, expiry + AN_HOUR)
+
+    expired = client.get(f"/{created['short_code']}")
+    never_created = client.get(f"/{AN_UNKNOWN_SHORT_CODE}")
+
+    assert expired.status_code == never_created.status_code
+    assert expired.text == never_created.text
+    assert set(expired.headers) == set(never_created.headers)
+    assert expired.headers["content-type"] == never_created.headers["content-type"]
+
+
+def test_only_the_expired_short_link_stops_resolving(client):
+    expiry = moment(AN_HOUR)
+    expiring = shorten_until(client, expiry.isoformat()).json()
+    permanent = shorten(client)
+
+    wait_until(client, expiry + AN_HOUR)
+
+    assert client.get(f"/{expiring['short_code']}").status_code == 404
+    assert client.get(f"/{permanent['short_code']}").status_code == 302
 
 
 def test_a_refused_expiry_mints_no_short_link(client, scripted_short_codes):
