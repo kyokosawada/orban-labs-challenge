@@ -32,6 +32,12 @@ _CARRIES_TAG = """
     )
 """
 
+_MENTIONS_KEYWORD = """
+    (title LIKE ? ESCAPE '\\' OR body LIKE ? ESCAPE '\\')
+"""
+
+_LIKE_SPECIAL_CHARACTERS = ("\\", "%", "_")
+
 _INSERT_TAG = "INSERT INTO tags (name) VALUES (?) ON CONFLICT (name) DO NOTHING"
 
 _ATTACH_TAG = """
@@ -87,10 +93,22 @@ def _attach_tags(connection: sqlite3.Connection, note_id: int, tags: list[str]) 
     connection.executemany(_ATTACH_TAG, [(note_id, tag) for tag in tags])
 
 
-def _selection(tag: str | None) -> tuple[str, list[str]]:
-    if tag is None:
-        return _NOT_DELETED, []
-    return f"{_NOT_DELETED} AND {_CARRIES_TAG}", [tag]
+def _mentioning(keyword: str) -> str:
+    for character in _LIKE_SPECIAL_CHARACTERS:
+        keyword = keyword.replace(character, f"\\{character}")
+    return f"%{keyword}%"
+
+
+def _selection(tag: str | None, keyword: str | None) -> tuple[str, list[str]]:
+    conditions = [_NOT_DELETED]
+    parameters: list[str] = []
+    if tag is not None:
+        conditions.append(_CARRIES_TAG)
+        parameters.append(tag)
+    if keyword is not None:
+        conditions.append(_MENTIONS_KEYWORD)
+        parameters += [_mentioning(keyword)] * 2
+    return " AND ".join(conditions), parameters
 
 
 def create_note(
@@ -106,8 +124,12 @@ def create_note(
     return _to_note(row, written[row["id"]])
 
 
-def list_notes(connection: sqlite3.Connection, tag: str | None = None) -> list[Note]:
-    conditions, parameters = _selection(tag)
+def list_notes(
+    connection: sqlite3.Connection,
+    tag: str | None = None,
+    keyword: str | None = None,
+) -> list[Note]:
+    conditions, parameters = _selection(tag, keyword)
     statement = _SELECT_NOTES.format(columns=_NOTE_COLUMNS, conditions=conditions)
     rows = connection.execute(statement, parameters).fetchall()
     tags = _tags_of_notes(connection, conditions, parameters)

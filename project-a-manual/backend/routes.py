@@ -7,7 +7,7 @@ from . import repository
 from .auth import require_api_key
 from .db import get_connection
 from .errors import ErrorResponse
-from .schemas import Note, NoteCreate, TagFilter
+from .schemas import KeywordFilter, Note, NoteCreate, TagFilter
 
 FAILURE_RESPONSES = {
     status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse},
@@ -48,14 +48,26 @@ TagQuery = Annotated[
     Query(description="Narrow the list to Notes carrying this Tag."),
 ]
 
+KeywordQuery = Annotated[
+    KeywordFilter,
+    Query(
+        description=(
+            "Narrow the list to Notes whose title or body mentions this, "
+            "wherever it appears and whatever the capitalisation."
+        )
+    ),
+]
+
 
 @router.get(
     "",
     response_model=list[Note],
     summary="List Notes, most recently changed first",
 )
-def list_notes(connection: Connection, tag: TagQuery = None) -> list[Note]:
-    return repository.list_notes(connection, tag)
+def list_notes(
+    connection: Connection, q: KeywordQuery = None, tag: TagQuery = None
+) -> list[Note]:
+    return repository.list_notes(connection, tag=tag, keyword=q)
 
 
 @tags_router.get(
