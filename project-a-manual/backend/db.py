@@ -19,6 +19,22 @@ SCHEMA_STATEMENTS = (
     CREATE INDEX IF NOT EXISTS notes_live_by_recency
         ON notes (deleted_at, updated_at DESC, id DESC)
     """,
+    """
+    CREATE TABLE IF NOT EXISTS tags (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS note_tags (
+        note_id INTEGER NOT NULL REFERENCES notes (id),
+        tag_id INTEGER NOT NULL REFERENCES tags (id),
+        PRIMARY KEY (note_id, tag_id)
+    )
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS note_tags_by_tag ON note_tags (tag_id, note_id)
+    """,
 )
 
 

@@ -30,7 +30,9 @@ Connection = Annotated[sqlite3.Connection, Depends(get_connection)]
     summary="Write a Note",
 )
 def create_note(payload: NoteCreate, connection: Connection) -> Note:
-    return repository.create_note(connection, payload.title, payload.body or "")
+    return repository.create_note(
+        connection, payload.title, payload.body or "", payload.tags
+    )
 
 
 @router.get(

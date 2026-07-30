@@ -19,16 +19,28 @@ def _trimmed_title(value: str) -> str:
     return trimmed
 
 
+def normalise_tag(value: str) -> str:
+    return value.strip().lower()
+
+
+def _normalised_tags(values: list[str]) -> list[str]:
+    return sorted({normalise_tag(value) for value in values})
+
+
 class NoteCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     title: Annotated[str, AfterValidator(_trimmed_title)]
     body: Annotated[str | None, Field(max_length=BODY_MAX_LENGTH)] = None
+    tags: Annotated[list[str], AfterValidator(_normalised_tags)] = Field(
+        default_factory=list
+    )
 
 
 class Note(BaseModel):
     id: int
     title: str
     body: str
+    tags: list[str]
     created_at: datetime
     updated_at: datetime
