@@ -39,7 +39,7 @@ Connection = Annotated[sqlite3.Connection, Depends(get_connection)]
 )
 def create_note(payload: NoteContent, connection: Connection) -> Note:
     return repository.create_note(
-        connection, payload.title, payload.body or "", payload.tags
+        connection, payload.title, payload.body, payload.tags
     )
 
 
@@ -53,7 +53,7 @@ def replace_note(
     note_id: int, payload: NoteContent, connection: Connection
 ) -> Note:
     note = repository.replace_note(
-        connection, note_id, payload.title, payload.body or "", payload.tags
+        connection, note_id, payload.title, payload.body, payload.tags
     )
     if note is None:
         raise ApiError(

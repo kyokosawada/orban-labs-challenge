@@ -135,6 +135,21 @@ def test_an_edit_that_names_no_tags_leaves_the_note_carrying_none(client):
     assert edit_note(client, written["id"], title="Invoice")["tags"] == []
 
 
+def test_an_edit_that_names_no_body_leaves_the_note_without_one(client):
+    written = create_note(client, title="Invoice", body="Due Friday")
+
+    assert edit_note(client, written["id"], title="Invoice")["body"] == ""
+
+
+def test_a_body_can_be_emptied_by_an_edit(client):
+    written = create_note(client, title="Invoice", body="Due Friday")
+
+    edited = edit_note(client, written["id"], title="Invoice", body="")
+
+    assert edited["body"] == ""
+    assert listed(client) == [edited]
+
+
 def test_replacing_tags_does_not_disturb_the_same_tags_on_other_notes(client):
     invoice = create_note(client, title="Invoice", tags=["work", "finance"])
     standup = create_note(client, title="Standup", tags=["work"])

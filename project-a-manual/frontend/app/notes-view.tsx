@@ -146,7 +146,9 @@ export default function NotesView() {
         setFailure(describeFailure(response.status, payload));
         return;
       }
-      setTagsInUse(payload as string[]);
+      const offered = payload as string[];
+      setTagsInUse(offered);
+      setFilterTag((tag) => (tag !== null && !offered.includes(tag) ? null : tag));
     } catch {
       setFailure(NETWORK_FAILURE);
     }
@@ -170,11 +172,12 @@ export default function NotesView() {
     void loadTagsInUse();
   }, [loadTagsInUse]);
 
-  function clearForm() {
+  function resetForm() {
     setEditing(null);
     setTitle("");
     setBody("");
     setTags("");
+    setFailure(null);
   }
 
   function startEditing(note: Note) {
@@ -204,8 +207,7 @@ export default function NotesView() {
         setFailure(describeFailure(response.status, payload));
         return;
       }
-      setFailure(null);
-      clearForm();
+      resetForm();
       await Promise.all([loadNotes(), loadTagsInUse()]);
     } catch {
       setFailure(NETWORK_FAILURE);
@@ -309,7 +311,7 @@ export default function NotesView() {
               type="button"
               className="secondary"
               disabled={saving}
-              onClick={clearForm}
+              onClick={resetForm}
             >
               Cancel
             </button>

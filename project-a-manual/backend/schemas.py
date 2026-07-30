@@ -63,6 +63,10 @@ def _keyword_filter(value: str | None) -> str | None:
 KeywordFilter = Annotated[str | None, AfterValidator(_keyword_filter)]
 
 
+def _written_body(value: str | None) -> str:
+    return value if value is not None else ""
+
+
 def _normalised_tags(values: list[str]) -> list[str]:
     tags = sorted({validated_tag(value) for value in values})
     if len(tags) > TAGS_PER_NOTE_MAX:
@@ -74,7 +78,9 @@ class NoteContent(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     title: Annotated[str, AfterValidator(_trimmed_title)]
-    body: Annotated[str | None, Field(max_length=BODY_MAX_LENGTH)] = None
+    body: Annotated[
+        str | None, Field(max_length=BODY_MAX_LENGTH), AfterValidator(_written_body)
+    ] = ""
     tags: Annotated[list[str], AfterValidator(_normalised_tags)] = Field(
         default_factory=list
     )

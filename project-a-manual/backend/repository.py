@@ -121,6 +121,11 @@ def _selection(tag: str | None, keyword: str | None) -> tuple[str, list[str]]:
     return " AND ".join(conditions), parameters
 
 
+def _with_its_tags(connection: sqlite3.Connection, row: sqlite3.Row) -> Note:
+    written = _tags_of_notes(connection, _IS_NOTE, [row["id"]])
+    return _to_note(row, written[row["id"]])
+
+
 def create_note(
     connection: sqlite3.Connection, title: str, body: str, tags: list[str]
 ) -> Note:
@@ -130,8 +135,7 @@ def create_note(
             _INSERT_NOTE, (title, body, timestamp, timestamp)
         ).fetchone()
         _attach_tags(connection, row["id"], tags)
-    written = _tags_of_notes(connection, _IS_NOTE, [row["id"]])
-    return _to_note(row, written[row["id"]])
+    return _with_its_tags(connection, row)
 
 
 def replace_note(
@@ -142,15 +146,14 @@ def replace_note(
     tags: list[str],
 ) -> Note | None:
     with connection:
-        rows = connection.execute(
+        row = connection.execute(
             _UPDATE_NOTE, (title, body, _now(), note_id)
-        ).fetchall()
-        if not rows:
+        ).fetchone()
+        if row is None:
             return None
         connection.execute(_DETACH_EVERY_TAG, (note_id,))
         _attach_tags(connection, note_id, tags)
-    written = _tags_of_notes(connection, _IS_NOTE, [note_id])
-    return _to_note(rows[0], written[note_id])
+    return _with_its_tags(connection, row)
 
 
 def list_notes(
