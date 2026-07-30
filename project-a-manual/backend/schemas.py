@@ -70,7 +70,7 @@ def _normalised_tags(values: list[str]) -> list[str]:
     return tags
 
 
-class NoteCreate(BaseModel):
+class NoteContent(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     title: Annotated[str, AfterValidator(_trimmed_title)]

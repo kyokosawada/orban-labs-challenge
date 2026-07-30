@@ -12,6 +12,13 @@ _INSERT_NOTE = f"""
     RETURNING {_NOTE_COLUMNS}
 """
 
+_UPDATE_NOTE = f"""
+    UPDATE notes
+    SET title = ?, body = ?, updated_at = ?
+    WHERE id = ? AND deleted_at IS NULL
+    RETURNING {_NOTE_COLUMNS}
+"""
+
 _SELECT_NOTES = """
     SELECT {columns}
     FROM notes
@@ -44,6 +51,8 @@ _ATTACH_TAG = """
     INSERT INTO note_tags (note_id, tag_id)
     SELECT ?, id FROM tags WHERE name = ?
 """
+
+_DETACH_EVERY_TAG = "DELETE FROM note_tags WHERE note_id = ?"
 
 _SELECT_TAGS_OF_NOTES = """
     SELECT note_tags.note_id, tags.name
@@ -123,6 +132,25 @@ def create_note(
         _attach_tags(connection, row["id"], tags)
     written = _tags_of_notes(connection, _IS_NOTE, [row["id"]])
     return _to_note(row, written[row["id"]])
+
+
+def replace_note(
+    connection: sqlite3.Connection,
+    note_id: int,
+    title: str,
+    body: str,
+    tags: list[str],
+) -> Note | None:
+    with connection:
+        rows = connection.execute(
+            _UPDATE_NOTE, (title, body, _now(), note_id)
+        ).fetchall()
+        if not rows:
+            return None
+        connection.execute(_DETACH_EVERY_TAG, (note_id,))
+        _attach_tags(connection, note_id, tags)
+    written = _tags_of_notes(connection, _IS_NOTE, [note_id])
+    return _to_note(rows[0], written[note_id])
 
 
 def list_notes(

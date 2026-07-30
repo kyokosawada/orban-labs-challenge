@@ -6,8 +6,8 @@ from typing_extensions import Annotated
 from . import repository
 from .auth import require_api_key
 from .db import get_connection
-from .errors import ErrorResponse
-from .schemas import KeywordFilter, Note, NoteCreate, TagFilter
+from .errors import CODE_NOT_FOUND, ApiError, ErrorResponse
+from .schemas import KeywordFilter, Note, NoteContent, TagFilter
 
 FAILURE_RESPONSES = {
     status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse},
@@ -37,10 +37,31 @@ Connection = Annotated[sqlite3.Connection, Depends(get_connection)]
     response_model=Note,
     summary="Write a Note",
 )
-def create_note(payload: NoteCreate, connection: Connection) -> Note:
+def create_note(payload: NoteContent, connection: Connection) -> Note:
     return repository.create_note(
         connection, payload.title, payload.body or "", payload.tags
     )
+
+
+@router.put(
+    "/{note_id}",
+    response_model=Note,
+    summary="Change a Note, replacing its Tags",
+    responses={status.HTTP_404_NOT_FOUND: {"model": ErrorResponse}},
+)
+def replace_note(
+    note_id: int, payload: NoteContent, connection: Connection
+) -> Note:
+    note = repository.replace_note(
+        connection, note_id, payload.title, payload.body or "", payload.tags
+    )
+    if note is None:
+        raise ApiError(
+            status.HTTP_404_NOT_FOUND,
+            CODE_NOT_FOUND,
+            f"There is no Note with id {note_id}.",
+        )
+    return note
 
 
 TagQuery = Annotated[
