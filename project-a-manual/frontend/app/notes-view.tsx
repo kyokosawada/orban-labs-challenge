@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { describeFailure, type ErrorEnvelope, type FieldError } from "./errors";
 
 type Note = {
@@ -109,7 +109,9 @@ export default function NotesView() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [tags, setTags] = useState("");
+  const [editing, setEditing] = useState<Note | null>(null);
   const [saving, setSaving] = useState(false);
+  const titleInput = useRef<HTMLInputElement>(null);
 
   const loadNotes = useCallback(
     async (signal?: AbortSignal) => {
@@ -168,24 +170,42 @@ export default function NotesView() {
     void loadTagsInUse();
   }, [loadTagsInUse]);
 
+  function clearForm() {
+    setEditing(null);
+    setTitle("");
+    setBody("");
+    setTags("");
+  }
+
+  function startEditing(note: Note) {
+    setEditing(note);
+    setTitle(note.title);
+    setBody(note.body);
+    setTags(note.tags.join(", "));
+    setFailure(null);
+    titleInput.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    titleInput.current?.focus({ preventScroll: true });
+  }
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setSaving(true);
     try {
-      const response = await fetch("/api/notes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, body, tags: tagsTyped(tags) }),
-      });
+      const response = await fetch(
+        editing ? `/api/notes/${editing.id}` : "/api/notes",
+        {
+          method: editing ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title, body, tags: tagsTyped(tags) }),
+        },
+      );
       const payload = await readJson(response);
       if (!response.ok) {
         setFailure(describeFailure(response.status, payload));
         return;
       }
       setFailure(null);
-      setTitle("");
-      setBody("");
-      setTags("");
+      clearForm();
       await Promise.all([loadNotes(), loadTagsInUse()]);
     } catch {
       setFailure(NETWORK_FAILURE);
@@ -220,12 +240,15 @@ export default function NotesView() {
         </div>
       ) : null}
 
+      <h2>{editing ? "Edit note" : "Write a note"}</h2>
+
       <form className="card" onSubmit={submit} noValidate>
         <div className="field">
           <label htmlFor="title">Title</label>
           <input
             id="title"
             name="title"
+            ref={titleInput}
             value={title}
             onChange={(event) => setTitle(event.target.value)}
             aria-invalid={titleError ? "true" : undefined}
@@ -277,9 +300,21 @@ export default function NotesView() {
           )}
         </div>
 
-        <button type="submit" disabled={saving}>
-          {saving ? "Saving..." : "Save note"}
-        </button>
+        <div className="actions">
+          <button type="submit" disabled={saving}>
+            {saving ? "Saving..." : editing ? "Save changes" : "Save note"}
+          </button>
+          {editing ? (
+            <button
+              type="button"
+              className="secondary"
+              disabled={saving}
+              onClick={clearForm}
+            >
+              Cancel
+            </button>
+          ) : null}
+        </div>
       </form>
 
       <h2>Your notes</h2>
@@ -323,7 +358,11 @@ export default function NotesView() {
       ) : (
         <ul className="notes">
           {notes.map((note) => (
-            <li className="card" key={note.id}>
+            <li
+              className={editing?.id === note.id ? "card being-edited" : "card"}
+              key={note.id}
+              aria-current={editing?.id === note.id ? "true" : undefined}
+            >
               <h3>{note.title}</h3>
               {note.body ? <p>{note.body}</p> : null}
               {note.tags.length > 0 ? (
@@ -338,9 +377,22 @@ export default function NotesView() {
                   ))}
                 </div>
               ) : null}
-              <span className="timestamp">
-                Written {formatTimestamp(note.created_at)}
-              </span>
+              <div className="note-footer">
+                <span className="timestamp">
+                  Written {formatTimestamp(note.created_at)}
+                  {note.updated_at !== note.created_at
+                    ? `, changed ${formatTimestamp(note.updated_at)}`
+                    : null}
+                </span>
+                <button
+                  type="button"
+                  className="secondary"
+                  aria-label={`Edit ${note.title}`}
+                  onClick={() => startEditing(note)}
+                >
+                  Edit
+                </button>
+              </div>
             </li>
           ))}
         </ul>

@@ -148,6 +148,23 @@ button:disabled {
   cursor: not-allowed;
 }
 
+button.secondary {
+  color: var(--ink);
+  background: var(--surface);
+  border-color: var(--line);
+}
+
+button.secondary:hover:not(:disabled) {
+  opacity: 1;
+  border-color: var(--ink-soft);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .alert {
   background: var(--danger-soft);
   border: 1px solid var(--danger-line);
@@ -274,6 +291,29 @@ h2 {
   margin-top: 0.625rem;
   font-size: 0.8125rem;
   color: var(--ink-soft);
+}
+
+.note-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-top: 0.625rem;
+}
+
+.note-footer .timestamp {
+  margin-top: 0;
+}
+
+.note-footer button {
+  font-size: 0.8125rem;
+  padding: 0.25rem 0.75rem;
+}
+
+.card.being-edited {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(31, 95, 79, 0.12);
 }
 
 .empty {
