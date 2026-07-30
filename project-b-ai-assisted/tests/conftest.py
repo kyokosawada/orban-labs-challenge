@@ -1,8 +1,10 @@
 from collections.abc import Iterator
+from datetime import datetime
 
 import pytest
 from fastapi.testclient import TestClient
 
+from backend.clock import clock
 from backend.codes import short_code_source
 from backend.config import API_KEY_HEADER, get_settings
 
@@ -55,5 +57,13 @@ def scripted_short_codes():
         test_client.app.dependency_overrides[short_code_source] = (
             lambda: lambda: next(remaining)
         )
+
+    return script
+
+
+@pytest.fixture
+def scripted_clock():
+    def script(test_client: TestClient, arrival: datetime) -> None:
+        test_client.app.dependency_overrides[clock] = lambda: lambda: arrival
 
     return script

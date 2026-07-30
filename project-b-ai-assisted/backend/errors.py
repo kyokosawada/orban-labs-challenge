@@ -13,6 +13,8 @@ CODE_METHOD_NOT_ALLOWED = "method_not_allowed"
 CODE_INTERNAL_ERROR = "internal_error"
 CODE_SHORT_CODE_UNAVAILABLE = "short_code_unavailable"
 
+VALIDATION_FAILED_MESSAGE = "The request could not be accepted."
+
 _FRAMEWORK_FAILURES = {
     status.HTTP_401_UNAUTHORIZED: (
         CODE_UNAUTHORIZED,
@@ -48,7 +50,7 @@ class ErrorResponse(BaseModel):
         "json_schema_extra": {
             "example": {
                 "code": CODE_VALIDATION_ERROR,
-                "message": "The request could not be accepted.",
+                "message": VALIDATION_FAILED_MESSAGE,
                 "fields": [
                     {"field": "destination", "message": "Destination must not be empty."}
                 ],
@@ -115,7 +117,7 @@ def register_error_handlers(app: FastAPI) -> None:
         return error_response(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
             CODE_VALIDATION_ERROR,
-            "The request could not be accepted.",
+            VALIDATION_FAILED_MESSAGE,
             [_field_error(error) for error in exc.errors()],
         )
 

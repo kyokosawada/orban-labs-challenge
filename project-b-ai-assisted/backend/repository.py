@@ -27,7 +27,7 @@ _SELECT_RESOLVABLE_BY_SHORT_CODE = f"""
 """
 
 
-def _moment(value: datetime | None) -> str | None:
+def _stored_moment(value: datetime | None) -> str | None:
     if value is None:
         return None
     return value.astimezone(timezone.utc).isoformat(timespec="microseconds")
@@ -57,8 +57,8 @@ def create_short_link(
                     (
                         generate_code(),
                         destination,
-                        _moment(created_at),
-                        _moment(expires_at),
+                        _stored_moment(created_at),
+                        _stored_moment(expires_at),
                     ),
                 ).fetchone()
         except sqlite3.IntegrityError:
@@ -73,6 +73,6 @@ def find_resolvable_short_link(
     connection: sqlite3.Connection, short_code: str, now: datetime
 ) -> ShortLink | None:
     row = connection.execute(
-        _SELECT_RESOLVABLE_BY_SHORT_CODE, (short_code, _moment(now))
+        _SELECT_RESOLVABLE_BY_SHORT_CODE, (short_code, _stored_moment(now))
     ).fetchone()
     return _to_short_link(row) if row is not None else None

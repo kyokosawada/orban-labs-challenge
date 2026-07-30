@@ -13,6 +13,7 @@ from .db import get_connection
 from .errors import (
     CODE_SHORT_CODE_UNAVAILABLE,
     CODE_VALIDATION_ERROR,
+    VALIDATION_FAILED_MESSAGE,
     ApiError,
     ErrorResponse,
     FieldError,
@@ -33,7 +34,7 @@ short_links_router = APIRouter(
 
 Connection = Annotated[sqlite3.Connection, Depends(get_connection)]
 CodeSource = Annotated[ShortCodeSource, Depends(short_code_source)]
-Now = Annotated[Clock, Depends(clock)]
+ClockSource = Annotated[Clock, Depends(clock)]
 
 
 def _require_a_future_expiry(expires_at: datetime | None, now: datetime) -> None:
@@ -41,7 +42,7 @@ def _require_a_future_expiry(expires_at: datetime | None, now: datetime) -> None
         raise ApiError(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
             CODE_VALIDATION_ERROR,
-            "The request could not be accepted.",
+            VALIDATION_FAILED_MESSAGE,
             [
                 FieldError(
                     field="expires_at",
@@ -61,7 +62,7 @@ def create_short_link(
     payload: ShortLinkCreate,
     connection: Connection,
     generate_code: CodeSource,
-    now: Now,
+    now: ClockSource,
 ) -> ShortLink:
     minted_at = now()
     _require_a_future_expiry(payload.expires_at, minted_at)
@@ -100,7 +101,9 @@ redirect_router = APIRouter(tags=["redirect"])
         },
     },
 )
-def follow_short_link(short_code: str, connection: Connection, now: Now) -> Response:
+def follow_short_link(
+    short_code: str, connection: Connection, now: ClockSource
+) -> Response:
     short_link = repository.find_resolvable_short_link(connection, short_code, now())
     if short_link is None:
         return PlainTextResponse(
