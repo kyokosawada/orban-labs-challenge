@@ -41,6 +41,22 @@ function unattachedFields(failure: ErrorEnvelope): FieldError[] {
   );
 }
 
+function TagButton({
+  label,
+  pressed,
+  onPress,
+}: {
+  label: string;
+  pressed: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <button type="button" className="tag" aria-pressed={pressed} onClick={onPress}>
+      {label}
+    </button>
+  );
+}
+
 function tagsTyped(value: string): string[] {
   return value
     .split(",")
@@ -89,12 +105,14 @@ export default function NotesView() {
   const loadTagsInUse = useCallback(async () => {
     try {
       const response = await fetch("/api/tags");
+      const payload = await readJson(response);
       if (!response.ok) {
+        setFailure(describeFailure(response.status, payload));
         return;
       }
-      setTagsInUse((await readJson(response)) as string[]);
+      setTagsInUse(payload as string[]);
     } catch {
-      setTagsInUse([]);
+      setFailure(NETWORK_FAILURE);
     }
   }, []);
 
@@ -222,26 +240,20 @@ export default function NotesView() {
 
       <h2>Your notes</h2>
 
-      {tagsInUse.length > 0 ? (
+      {tagsInUse.length > 0 || filterTag !== null ? (
         <div className="filters" role="group" aria-label="Filter by tag">
-          <button
-            type="button"
-            className="tag"
-            aria-pressed={filterTag === null}
-            onClick={() => setFilterTag(null)}
-          >
-            All
-          </button>
+          <TagButton
+            label="All"
+            pressed={filterTag === null}
+            onPress={() => setFilterTag(null)}
+          />
           {tagsInUse.map((tag) => (
-            <button
-              type="button"
-              className="tag"
+            <TagButton
               key={tag}
-              aria-pressed={filterTag === tag}
-              onClick={() => setFilterTag(filterTag === tag ? null : tag)}
-            >
-              {tag}
-            </button>
+              label={tag}
+              pressed={filterTag === tag}
+              onPress={() => setFilterTag(filterTag === tag ? null : tag)}
+            />
           ))}
         </div>
       ) : null}
@@ -263,15 +275,12 @@ export default function NotesView() {
               {note.tags.length > 0 ? (
                 <div className="note-tags">
                   {note.tags.map((tag) => (
-                    <button
-                      type="button"
-                      className="tag"
+                    <TagButton
                       key={tag}
-                      aria-pressed={filterTag === tag}
-                      onClick={() => setFilterTag(filterTag === tag ? null : tag)}
-                    >
-                      {tag}
-                    </button>
+                      label={tag}
+                      pressed={filterTag === tag}
+                      onPress={() => setFilterTag(filterTag === tag ? null : tag)}
+                    />
                   ))}
                 </div>
               ) : null}
