@@ -111,6 +111,7 @@ export default function NotesView() {
   const [tags, setTags] = useState("");
   const [editing, setEditing] = useState<Note | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState<number | null>(null);
   const titleInput = useRef<HTMLInputElement>(null);
 
   const loadNotes = useCallback(
@@ -213,6 +214,27 @@ export default function NotesView() {
       setFailure(NETWORK_FAILURE);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function remove(note: Note) {
+    if (!window.confirm(`Delete "${note.title}"? It cannot be brought back.`)) {
+      return;
+    }
+    setDeleting(note.id);
+    try {
+      const response = await fetch(`/api/notes/${note.id}`, { method: "DELETE" });
+      const refused = response.ok
+        ? null
+        : describeFailure(response.status, await readJson(response));
+      await Promise.all([loadNotes(), loadTagsInUse()]);
+      if (refused !== null) {
+        setFailure(refused);
+      }
+    } catch {
+      setFailure(NETWORK_FAILURE);
+    } finally {
+      setDeleting(null);
     }
   }
 
@@ -386,14 +408,24 @@ export default function NotesView() {
                     ? `, changed ${formatTimestamp(note.updated_at)}`
                     : null}
                 </span>
-                <button
-                  type="button"
-                  className="secondary"
-                  aria-label={`Edit ${note.title}`}
-                  onClick={() => startEditing(note)}
-                >
-                  Edit
-                </button>
+                <div className="actions">
+                  <button
+                    type="button"
+                    className="secondary"
+                    aria-label={`Edit ${note.title}`}
+                    onClick={() => startEditing(note)}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    className="delete"
+                    onClick={() => void remove(note)}
+                    disabled={deleting === note.id}
+                  >
+                    {deleting === note.id ? "Deleting..." : "Delete"}
+                  </button>
+                </div>
               </div>
             </li>
           ))}
