@@ -30,6 +30,12 @@ _NOT_DELETED = "deleted_at IS NULL"
 
 _IS_NOTE = "id = ?"
 
+_MARK_NOTE_DELETED = f"""
+    UPDATE notes
+    SET deleted_at = ?
+    WHERE {_IS_NOTE} AND {_NOT_DELETED}
+"""
+
 _CARRIES_TAG = """
     id IN (
         SELECT note_tags.note_id
@@ -88,7 +94,7 @@ def _to_note(row: sqlite3.Row, tags: list[str]) -> Note:
 
 
 def _tags_of_notes(
-    connection: sqlite3.Connection, conditions: str, parameters: list[str]
+    connection: sqlite3.Connection, conditions: str, parameters: list[object]
 ) -> defaultdict[int, list[str]]:
     statement = _SELECT_TAGS_OF_NOTES.format(conditions=conditions)
     tags: defaultdict[int, list[str]] = defaultdict(list)
@@ -109,20 +115,24 @@ def _like_pattern(keyword: str) -> str:
     return f"%{keyword}%"
 
 
-def _selection(tag: str | None, keyword: str | None) -> tuple[str, list[str]]:
-    conditions = [_NOT_DELETED]
-    parameters: list[str] = []
+def _live(*conditions: str) -> str:
+    return " AND ".join((_NOT_DELETED, *conditions))
+
+
+def _selection(tag: str | None, keyword: str | None) -> tuple[str, list[object]]:
+    conditions: list[str] = []
+    parameters: list[object] = []
     if tag is not None:
         conditions.append(_CARRIES_TAG)
         parameters.append(tag)
     if keyword is not None:
         conditions.append(_MENTIONS_KEYWORD)
         parameters += [_like_pattern(keyword)] * 2
-    return " AND ".join(conditions), parameters
+    return _live(*conditions), parameters
 
 
 def _with_its_tags(connection: sqlite3.Connection, row: sqlite3.Row) -> Note:
-    written = _tags_of_notes(connection, _IS_NOTE, [row["id"]])
+    written = _tags_of_notes(connection, _live(_IS_NOTE), [row["id"]])
     return _to_note(row, written[row["id"]])
 
 
@@ -166,6 +176,22 @@ def list_notes(
     rows = connection.execute(statement, parameters).fetchall()
     tags = _tags_of_notes(connection, conditions, parameters)
     return [_to_note(row, tags[row["id"]]) for row in rows]
+
+
+def read_note(connection: sqlite3.Connection, note_id: int) -> Note | None:
+    conditions = _live(_IS_NOTE)
+    statement = _SELECT_NOTES.format(columns=_NOTE_COLUMNS, conditions=conditions)
+    row = connection.execute(statement, [note_id]).fetchone()
+    if row is None:
+        return None
+    tags = _tags_of_notes(connection, conditions, [note_id])
+    return _to_note(row, tags[row["id"]])
+
+
+def delete_note(connection: sqlite3.Connection, note_id: int) -> bool:
+    with connection:
+        deleted = connection.execute(_MARK_NOTE_DELETED, (_now(), note_id))
+    return deleted.rowcount == 1
 
 
 def list_tags_in_use(connection: sqlite3.Connection) -> list[str]:

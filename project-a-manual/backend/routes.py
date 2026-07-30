@@ -1,6 +1,7 @@
 import sqlite3
+from typing import Any
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Path, Query, status
 from typing_extensions import Annotated
 
 from . import repository
@@ -9,11 +10,19 @@ from .db import get_connection
 from .errors import CODE_NOT_FOUND, ApiError, ErrorResponse
 from .schemas import KeywordFilter, Note, NoteContent, TagFilter
 
-FAILURE_RESPONSES = {
+Responses = dict[int | str, dict[str, Any]]
+
+FAILURE_RESPONSES: Responses = {
     status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse},
     status.HTTP_422_UNPROCESSABLE_ENTITY: {"model": ErrorResponse},
     status.HTTP_500_INTERNAL_SERVER_ERROR: {"model": ErrorResponse},
 }
+
+NOT_FOUND_RESPONSE: Responses = {
+    status.HTTP_404_NOT_FOUND: {"model": ErrorResponse}
+}
+
+NO_SUCH_NOTE = "There is no Note with that identifier."
 
 
 def _authenticated_router(prefix: str, group: str) -> APIRouter:
@@ -89,6 +98,37 @@ def list_notes(
     connection: Connection, q: KeywordQuery = None, tag: TagQuery = None
 ) -> list[Note]:
     return repository.list_notes(connection, tag=tag, keyword=q)
+
+
+NoteId = Annotated[int, Path(description="The identifier of the Note.")]
+
+
+def _no_such_note() -> ApiError:
+    return ApiError(status.HTTP_404_NOT_FOUND, CODE_NOT_FOUND, NO_SUCH_NOTE)
+
+
+@router.get(
+    "/{note_id}",
+    response_model=Note,
+    summary="Read one Note",
+    responses=NOT_FOUND_RESPONSE,
+)
+def read_note(note_id: NoteId, connection: Connection) -> Note:
+    note = repository.read_note(connection, note_id)
+    if note is None:
+        raise _no_such_note()
+    return note
+
+
+@router.delete(
+    "/{note_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a Note",
+    responses=NOT_FOUND_RESPONSE,
+)
+def delete_note(note_id: NoteId, connection: Connection) -> None:
+    if not repository.delete_note(connection, note_id):
+        raise _no_such_note()
 
 
 @tags_router.get(
