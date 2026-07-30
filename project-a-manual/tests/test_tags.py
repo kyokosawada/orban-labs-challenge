@@ -17,11 +17,9 @@ def in_storage(statement, parameters):
         connection.close()
 
 
-def delete_note(note):
-    in_storage(
-        "UPDATE notes SET deleted_at = ? WHERE id = ?",
-        ("2026-02-03T09:00:00+00:00", note["id"]),
-    )
+def delete_note(client, note):
+    response = client.delete(f"/notes/{note['id']}")
+    assert response.status_code == 204, response.text
 
 
 def take_tag_off_every_note(name):
@@ -147,7 +145,7 @@ def test_a_tag_whose_only_notes_are_deleted_stops_being_offered(client):
     invoice = create_note(client, title="Invoice", tags=["work"])
     create_note(client, title="Recipe", tags=["cooking"])
 
-    delete_note(invoice)
+    delete_note(client, invoice)
 
     assert tags_in_use(client) == ["cooking"]
 
@@ -156,7 +154,7 @@ def test_a_tag_a_live_note_still_carries_goes_on_being_offered(client):
     invoice = create_note(client, title="Invoice", tags=["work"])
     create_note(client, title="Standup", tags=["work"])
 
-    delete_note(invoice)
+    delete_note(client, invoice)
 
     assert tags_in_use(client) == ["work"]
 
@@ -165,7 +163,7 @@ def test_a_deleted_note_is_not_found_by_its_tag(client):
     invoice = create_note(client, title="Invoice", tags=["work"])
     create_note(client, title="Standup", tags=["work"])
 
-    delete_note(invoice)
+    delete_note(client, invoice)
 
     assert titles_tagged(client, "work") == ["Standup"]
 
