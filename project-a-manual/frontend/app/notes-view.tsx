@@ -224,9 +224,11 @@ export default function NotesView() {
     setDeleting(note.id);
     try {
       const response = await fetch(`/api/notes/${note.id}`, { method: "DELETE" });
-      const refused = response.ok
-        ? null
-        : describeFailure(response.status, await readJson(response));
+      const alreadyGone = response.status === 404;
+      const refused =
+        response.ok || alreadyGone
+          ? null
+          : describeFailure(response.status, await readJson(response));
       await Promise.all([loadNotes(), loadTagsInUse()]);
       if (refused !== null) {
         setFailure(refused);
@@ -420,6 +422,7 @@ export default function NotesView() {
                   <button
                     type="button"
                     className="delete"
+                    aria-label={`Delete ${note.title}`}
                     onClick={() => void remove(note)}
                     disabled={deleting === note.id}
                   >
