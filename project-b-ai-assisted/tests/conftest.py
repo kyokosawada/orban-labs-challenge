@@ -3,6 +3,7 @@ from collections.abc import Iterator
 import pytest
 from fastapi.testclient import TestClient
 
+from backend.codes import short_code_source
 from backend.config import API_KEY_HEADER, get_settings
 
 
@@ -45,3 +46,14 @@ def client(build_client) -> Iterator[TestClient]:
 def anonymous_client(build_client) -> Iterator[TestClient]:
     with build_client(authenticate=False) as test_client:
         yield test_client
+
+
+@pytest.fixture
+def scripted_short_codes():
+    def script(test_client: TestClient, codes: list[str]) -> None:
+        remaining = iter(codes)
+        test_client.app.dependency_overrides[short_code_source] = (
+            lambda: lambda: next(remaining)
+        )
+
+    return script

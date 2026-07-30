@@ -4,6 +4,8 @@ from datetime import datetime, timezone
 from .codes import ShortCodeSource
 from .schemas import ShortLink
 
+SHORT_CODE_ATTEMPTS = 5
+
 _SHORT_LINK_COLUMNS = "short_code, destination, created_at"
 
 _INSERT_SHORT_LINK = f"""
@@ -11,6 +13,10 @@ _INSERT_SHORT_LINK = f"""
     VALUES (?, ?, ?)
     RETURNING {_SHORT_LINK_COLUMNS}
 """
+
+
+class ShortCodeUnavailable(RuntimeError):
+    pass
 
 
 def _now() -> str:
@@ -30,8 +36,15 @@ def create_short_link(
     destination: str,
     generate_code: ShortCodeSource,
 ) -> ShortLink:
-    with connection:
-        row = connection.execute(
-            _INSERT_SHORT_LINK, (generate_code(), destination, _now())
-        ).fetchone()
-    return _to_short_link(row)
+    for _ in range(SHORT_CODE_ATTEMPTS):
+        try:
+            with connection:
+                row = connection.execute(
+                    _INSERT_SHORT_LINK, (generate_code(), destination, _now())
+                ).fetchone()
+        except sqlite3.IntegrityError:
+            continue
+        return _to_short_link(row)
+    raise ShortCodeUnavailable(
+        f"No free Short Code was found in {SHORT_CODE_ATTEMPTS} attempts."
+    )
