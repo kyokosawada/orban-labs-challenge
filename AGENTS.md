@@ -40,6 +40,38 @@ There is no migration tool and schema creation is `CREATE TABLE IF NOT EXISTS` a
 startup, so a new column will not appear on an existing database. Adding a table is
 safe; adding a column to `notes` needs a deliberate plan.
 
+## Project B (`project-b-ai-assisted/`)
+
+Same layout as Project A: `backend/` is the importable package, `tests/` sits beside it.
+
+The spec is `docs/spec.md` and the decisions binding on it are `docs/adr/` plus the
+repo-wide `docs/adr/`. Honour them rather than re-deciding.
+
+Two processes, arranged the opposite way to Project A: the API serves the redirect
+itself and only creation and stats go through the Next.js proxy. ADR 0001 here says
+why. Development therefore runs two addresses.
+
+Run from `project-b-ai-assisted/`:
+
+    python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
+    .venv/bin/python -m pytest
+    SHORTENER_API_KEY=... .venv/bin/python -m uvicorn backend.main:app --reload
+
+Environment variables are listed in `.env.example` here and in `frontend/.env.example`.
+The API key is server-side only: no key-related value may be prefixed `NEXT_PUBLIC_`.
+
+The root namespace belongs to Short Codes, so `GET /{short_code}` matches any single
+path segment. API endpoints stay reachable by carrying a hyphen, which a Short Code
+drawn from an alphanumeric alphabet can never contain. Keep new endpoints hyphenated.
+
+Tests build the client with `follow_redirects=False`. Never follow a redirect in a
+test: assert on the status and the `Location` header, or the suite starts fetching
+whatever the Destination points at.
+
+Schema creation is `CREATE TABLE IF NOT EXISTS` at startup with no migration tool, so
+the same caveat as Project A applies: a new column will not appear on an existing
+database.
+
 ## Maintaining this file
 
 Keep this file for knowledge useful to almost every future agent session in this project.
