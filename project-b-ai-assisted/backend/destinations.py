@@ -1,6 +1,5 @@
-import re
-from ipaddress import IPv4Address, IPv6Address, ip_address
-from urllib.parse import urlsplit
+from ipaddress import IPv4Address, IPv6Address, IPv6Network, ip_address
+from urllib.parse import SplitResult, urlsplit
 
 WEB_SCHEMES = frozenset({"http", "https"})
 
@@ -8,22 +7,29 @@ LOOPBACK_NAME = "localhost"
 
 SCHEME_REFUSAL = "Destination must start with http:// or https://."
 HOST_REFUSAL = "Destination must include a host, like https://example.com/page."
+HOST_SHAPE_REFUSAL = (
+    "Destination host must be a name or an address written in full, like "
+    "https://example.com/page or https://93.184.216.34/page."
+)
 PUBLIC_REFUSAL = (
     "Destination must point at a public host, not a loopback, link-local or "
     "private-network address."
 )
 
-_HOST_NAME = re.compile(r"^(?:[^\s./]+\.)*[A-Za-z][^\s./]*$")
+_EMBEDDED_IPV4_PREFIXES = (
+    IPv6Network("::ffff:0:0:0/96"),
+    IPv6Network("64:ff9b::/96"),
+)
 
 
-def _host_of(destination: str) -> str:
+def _split(destination: str) -> SplitResult:
     try:
-        parts = urlsplit(destination)
-        scheme = parts.scheme.lower()
+        return urlsplit(destination)
     except ValueError as unparsable:
         raise ValueError(HOST_REFUSAL) from unparsable
-    if scheme not in WEB_SCHEMES:
-        raise ValueError(SCHEME_REFUSAL)
+
+
+def _host_of(parts: SplitResult) -> str:
     try:
         host = parts.hostname
     except ValueError as unparsable:
@@ -38,24 +44,49 @@ def _as_address(host: str) -> IPv4Address | IPv6Address | None:
         address = ip_address(host)
     except ValueError:
         return None
-    if isinstance(address, IPv6Address) and address.ipv4_mapped is not None:
-        return address.ipv4_mapped
+    if isinstance(address, IPv6Address):
+        embedded = _embedded_ipv4(address)
+        if embedded is not None:
+            return embedded
     return address
+
+
+def _embedded_ipv4(address: IPv6Address) -> IPv4Address | None:
+    if address.ipv4_mapped is not None:
+        return address.ipv4_mapped
+    for prefix in _EMBEDDED_IPV4_PREFIXES:
+        if address in prefix:
+            return IPv4Address(int(address) & 0xFFFFFFFF)
+    return None
 
 
 def _is_public(address: IPv4Address | IPv6Address) -> bool:
     return address.is_global and not address.is_multicast
 
 
+def _is_host_name(host: str) -> bool:
+    labels = host.split(".")
+    if any(label == "" or any(part.isspace() for part in label) for label in labels):
+        return False
+    return labels[-1][0].isalpha()
+
+
+def _is_loopback_name(host: str) -> bool:
+    return host == LOOPBACK_NAME or host.endswith(f".{LOOPBACK_NAME}")
+
+
 def validate_destination(destination: str) -> str:
-    host = _host_of(destination)
+    parts = _split(destination)
+    if parts.scheme.lower() not in WEB_SCHEMES:
+        raise ValueError(SCHEME_REFUSAL)
+    host = _host_of(parts)
     address = _as_address(host)
     if address is not None:
         if not _is_public(address):
             raise ValueError(PUBLIC_REFUSAL)
         return destination
-    if not _HOST_NAME.match(host):
-        raise ValueError(HOST_REFUSAL)
-    if host == LOOPBACK_NAME or host.endswith(f".{LOOPBACK_NAME}"):
+    if not _is_host_name(host):
+        raise ValueError(HOST_SHAPE_REFUSAL)
+    if _is_loopback_name(host):
         raise ValueError(PUBLIC_REFUSAL)
     return destination

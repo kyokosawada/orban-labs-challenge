@@ -1,14 +1,10 @@
 import socket
 
+import pytest
+
 from tests.test_short_links import shorten
 
-A_PUBLIC_ADDRESS = "https://93.184.216.34/pricing"
-
-PRIVATE_DESTINATIONS = [
-    "http://10.0.0.5/admin",
-    "http://172.16.4.9/admin",
-    "http://192.168.1.1/admin",
-]
+A_PUBLIC_DESTINATION = "https://93.184.216.34/pricing"
 
 
 def refuse(client, destination):
@@ -57,7 +53,7 @@ def test_a_destination_without_a_scheme_is_refused(client):
 
 
 def test_a_destination_with_no_host_is_refused(client):
-    assert reason(client, "https:///page")
+    assert "host" in reason(client, "https:///page")
 
 
 def test_a_malformed_destination_names_the_field_in_the_shared_error_shape(client):
@@ -76,8 +72,13 @@ def test_an_ipv6_loopback_destination_is_refused(client):
     assert "loopback" in reason(client, "http://[::1]:8000/admin")
 
 
-def test_an_ipv4_mapped_loopback_destination_is_refused(client):
-    assert "loopback" in reason(client, "http://[::ffff:127.0.0.1]/admin")
+def test_a_loopback_address_carried_inside_an_ipv6_one_is_refused(client):
+    for destination in [
+        "http://[::ffff:127.0.0.1]/admin",
+        "http://[::ffff:0:127.0.0.1]/admin",
+        "http://[64:ff9b::7f00:1]/admin",
+    ]:
+        assert "loopback" in reason(client, destination), destination
 
 
 def test_the_loopback_name_is_refused_without_looking_it_up(client):
@@ -88,38 +89,56 @@ def test_a_link_local_destination_is_refused(client):
     assert "link-local" in reason(client, "http://169.254.169.254/latest/meta-data/")
 
 
-def test_a_private_network_destination_is_refused(client):
-    for destination in PRIVATE_DESTINATIONS:
-        assert "private" in reason(client, destination), destination
+@pytest.mark.parametrize(
+    "destination",
+    ["http://10.0.0.5/admin", "http://172.16.4.9/admin", "http://192.168.1.1/admin"],
+)
+def test_a_private_network_destination_is_refused(client, destination):
+    assert "private" in reason(client, destination)
 
 
 def test_the_unspecified_address_is_refused(client):
-    assert reason(client, "http://0.0.0.0:8000/admin")
+    assert "public" in reason(client, "http://0.0.0.0:8000/admin")
 
 
 def test_credentials_cannot_disguise_a_private_destination(client):
     assert "private" in reason(client, "https://example.com@10.0.0.5/admin")
 
 
-def test_a_loopback_address_written_as_one_number_is_refused(client):
-    assert reason(client, "https://2130706433/admin")
-
-
-def test_a_loopback_address_written_in_octal_is_refused(client):
-    assert reason(client, "https://0177.0.0.1/admin")
+@pytest.mark.parametrize(
+    "destination",
+    [
+        "https://2130706433/admin",
+        "https://0177.0.0.1/admin",
+        "http://127.1/admin",
+        "http://0x7f000001/admin",
+    ],
+)
+def test_an_address_not_written_in_full_is_refused(client, destination):
+    assert "written in full" in reason(client, destination)
 
 
 def test_a_public_address_literal_is_accepted(client):
-    created = shorten(client, destination=A_PUBLIC_ADDRESS)
+    created = shorten(client, destination=A_PUBLIC_DESTINATION)
 
-    assert created["destination"] == A_PUBLIC_ADDRESS
+    assert created["destination"] == A_PUBLIC_DESTINATION
+
+
+def test_a_name_outside_the_ascii_alphabet_is_accepted(client):
+    destination = "https://例え.みんな/page"
+
+    assert shorten(client, destination=destination)["destination"] == destination
 
 
 def test_the_refusal_says_which_rule_was_broken_rather_than_that_it_failed(client):
-    scheme_refusal = reason(client, "javascript:alert(1)")
-    address_refusal = reason(client, "http://127.0.0.1/admin")
+    refusals = {
+        reason(client, "javascript:alert(1)"),
+        reason(client, "http://127.0.0.1/admin"),
+        reason(client, "https://2130706433/admin"),
+        reason(client, "https:///page"),
+    }
 
-    assert scheme_refusal != address_refusal
+    assert len(refusals) == 4
 
 
 def test_a_refused_destination_mints_no_short_link(client, scripted_short_codes):
