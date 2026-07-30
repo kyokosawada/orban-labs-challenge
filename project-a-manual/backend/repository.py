@@ -14,8 +14,19 @@ _INSERT_NOTE = f"""
 _SELECT_LIVE_NOTES = f"""
     SELECT {_NOTE_COLUMNS}
     FROM notes
-    WHERE deleted_at IS NULL
+    WHERE {{conditions}}
     ORDER BY updated_at DESC, id DESC
+"""
+
+_NOT_DELETED = "deleted_at IS NULL"
+
+_CARRIES_TAG = """
+    id IN (
+        SELECT note_tags.note_id
+        FROM note_tags
+        JOIN tags ON tags.id = note_tags.tag_id
+        WHERE tags.name = ?
+    )
 """
 
 _INSERT_TAG = "INSERT INTO tags (name) VALUES (?) ON CONFLICT (name) DO NOTHING"
@@ -80,7 +91,15 @@ def create_note(
     return _to_note(row, _tags_of_notes(connection, [row["id"]])[row["id"]])
 
 
-def list_notes(connection: sqlite3.Connection) -> list[Note]:
-    rows = connection.execute(_SELECT_LIVE_NOTES).fetchall()
+def list_notes(
+    connection: sqlite3.Connection, tag: str | None = None
+) -> list[Note]:
+    conditions = [_NOT_DELETED]
+    parameters: list[str] = []
+    if tag is not None:
+        conditions.append(_CARRIES_TAG)
+        parameters.append(tag)
+    statement = _SELECT_LIVE_NOTES.format(conditions=" AND ".join(conditions))
+    rows = connection.execute(statement, parameters).fetchall()
     tags = _tags_of_notes(connection, [row["id"] for row in rows])
     return [_to_note(row, tags[row["id"]]) for row in rows]

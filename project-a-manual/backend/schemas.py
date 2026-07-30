@@ -45,6 +45,15 @@ def validated_tag(value: str) -> str:
     return tag
 
 
+def _tag_filter(value: str | None) -> str | None:
+    if value is None or not normalise_tag(value):
+        return None
+    return validated_tag(value)
+
+
+TagFilter = Annotated[str | None, AfterValidator(_tag_filter)]
+
+
 def _normalised_tags(values: list[str]) -> list[str]:
     tags = sorted({validated_tag(value) for value in values})
     if len(tags) > TAGS_PER_NOTE_MAX:
