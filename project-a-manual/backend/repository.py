@@ -1,4 +1,5 @@
 import sqlite3
+from collections import defaultdict
 from datetime import datetime, timezone
 
 from .schemas import Note
@@ -11,14 +12,16 @@ _INSERT_NOTE = f"""
     RETURNING {_NOTE_COLUMNS}
 """
 
-_SELECT_LIVE_NOTES = f"""
-    SELECT {_NOTE_COLUMNS}
+_SELECT_NOTES = """
+    SELECT {columns}
     FROM notes
-    WHERE {{conditions}}
+    WHERE {conditions}
     ORDER BY updated_at DESC, id DESC
 """
 
 _NOT_DELETED = "deleted_at IS NULL"
+
+_IS_NOTE = "id = ?"
 
 _CARRIES_TAG = """
     id IN (
@@ -40,17 +43,16 @@ _SELECT_TAGS_OF_NOTES = """
     SELECT note_tags.note_id, tags.name
     FROM note_tags
     JOIN tags ON tags.id = note_tags.tag_id
-    WHERE note_tags.note_id IN ({placeholders})
+    WHERE note_tags.note_id IN (SELECT id FROM notes WHERE {conditions})
     ORDER BY tags.name
 """
 
-
-_SELECT_TAGS_IN_USE = f"""
+_SELECT_TAGS_IN_USE = """
     SELECT DISTINCT tags.name
     FROM tags
     JOIN note_tags ON note_tags.tag_id = tags.id
     JOIN notes ON notes.id = note_tags.note_id
-    WHERE notes.{_NOT_DELETED}
+    WHERE notes.deleted_at IS NULL
     ORDER BY tags.name
 """
 
@@ -71,15 +73,11 @@ def _to_note(row: sqlite3.Row, tags: list[str]) -> Note:
 
 
 def _tags_of_notes(
-    connection: sqlite3.Connection, note_ids: list[int]
-) -> dict[int, list[str]]:
-    if not note_ids:
-        return {}
-    statement = _SELECT_TAGS_OF_NOTES.format(
-        placeholders=", ".join("?" * len(note_ids))
-    )
-    tags: dict[int, list[str]] = {note_id: [] for note_id in note_ids}
-    for row in connection.execute(statement, note_ids):
+    connection: sqlite3.Connection, conditions: str, parameters: list[str]
+) -> defaultdict[int, list[str]]:
+    statement = _SELECT_TAGS_OF_NOTES.format(conditions=conditions)
+    tags: defaultdict[int, list[str]] = defaultdict(list)
+    for row in connection.execute(statement, parameters):
         tags[row["note_id"]].append(row["name"])
     return tags
 
@@ -87,6 +85,12 @@ def _tags_of_notes(
 def _attach_tags(connection: sqlite3.Connection, note_id: int, tags: list[str]) -> None:
     connection.executemany(_INSERT_TAG, [(tag,) for tag in tags])
     connection.executemany(_ATTACH_TAG, [(note_id, tag) for tag in tags])
+
+
+def _selection(tag: str | None) -> tuple[str, list[str]]:
+    if tag is None:
+        return _NOT_DELETED, []
+    return f"{_NOT_DELETED} AND {_CARRIES_TAG}", [tag]
 
 
 def create_note(
@@ -98,20 +102,15 @@ def create_note(
             _INSERT_NOTE, (title, body, timestamp, timestamp)
         ).fetchone()
         _attach_tags(connection, row["id"], tags)
-    return _to_note(row, _tags_of_notes(connection, [row["id"]])[row["id"]])
+    written = _tags_of_notes(connection, _IS_NOTE, [row["id"]])
+    return _to_note(row, written[row["id"]])
 
 
-def list_notes(
-    connection: sqlite3.Connection, tag: str | None = None
-) -> list[Note]:
-    conditions = [_NOT_DELETED]
-    parameters: list[str] = []
-    if tag is not None:
-        conditions.append(_CARRIES_TAG)
-        parameters.append(tag)
-    statement = _SELECT_LIVE_NOTES.format(conditions=" AND ".join(conditions))
+def list_notes(connection: sqlite3.Connection, tag: str | None = None) -> list[Note]:
+    conditions, parameters = _selection(tag)
+    statement = _SELECT_NOTES.format(columns=_NOTE_COLUMNS, conditions=conditions)
     rows = connection.execute(statement, parameters).fetchall()
-    tags = _tags_of_notes(connection, [row["id"] for row in rows])
+    tags = _tags_of_notes(connection, conditions, parameters)
     return [_to_note(row, tags[row["id"]]) for row in rows]
 
 
