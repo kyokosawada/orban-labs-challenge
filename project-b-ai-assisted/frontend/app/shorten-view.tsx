@@ -111,6 +111,10 @@ export default function ShortenView({
 
   const destinationError = failure ? messageFor(failure, "destination") : undefined;
   const expiryError = failure ? messageFor(failure, "expires_at") : undefined;
+  const unattached = failure ? unattachedFields(failure) : [];
+  const shownBesideAField = Boolean(destinationError || expiryError);
+  const banner =
+    failure && (unattached.length > 0 || !shownBesideAField) ? failure : null;
 
   return (
     <main className="page">
@@ -121,12 +125,12 @@ export default function ShortenView({
         </p>
       </header>
 
-      {failure ? (
+      {banner ? (
         <div className="alert" role="alert">
-          <p>{failure.message}</p>
-          {unattachedFields(failure).length > 0 ? (
+          <p>{banner.message}</p>
+          {unattached.length > 0 ? (
             <ul>
-              {unattachedFields(failure).map((entry) => (
+              {unattached.map((entry) => (
                 <li key={`${entry.field}-${entry.message}`}>
                   <code>{entry.field}</code>: {entry.message}
                 </li>
@@ -153,7 +157,7 @@ export default function ShortenView({
             aria-describedby={destinationError ? "destination-error" : undefined}
           />
           {destinationError ? (
-            <span className="field-error" id="destination-error">
+            <span className="field-error" id="destination-error" role="alert">
               {destinationError}
             </span>
           ) : null}
@@ -171,7 +175,7 @@ export default function ShortenView({
             aria-describedby={expiryError ? "expiry-error" : "expiry-hint"}
           />
           {expiryError ? (
-            <span className="field-error" id="expiry-error">
+            <span className="field-error" id="expiry-error" role="alert">
               {expiryError}
             </span>
           ) : (
