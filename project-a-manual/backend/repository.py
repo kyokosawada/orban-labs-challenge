@@ -33,7 +33,7 @@ _CARRIES_TAG = """
 """
 
 _MENTIONS_KEYWORD = """
-    (casefold(title) LIKE ? ESCAPE '\\' OR casefold(body) LIKE ? ESCAPE '\\')
+    (lowercased(title) LIKE ? ESCAPE '\\' OR lowercased(body) LIKE ? ESCAPE '\\')
 """
 
 _LIKE_SPECIAL_CHARACTERS = ("\\", "%", "_")
@@ -93,8 +93,8 @@ def _attach_tags(connection: sqlite3.Connection, note_id: int, tags: list[str]) 
     connection.executemany(_ATTACH_TAG, [(note_id, tag) for tag in tags])
 
 
-def _mentioning(keyword: str) -> str:
-    keyword = keyword.casefold()
+def _like_pattern(keyword: str) -> str:
+    keyword = keyword.lower()
     for character in _LIKE_SPECIAL_CHARACTERS:
         keyword = keyword.replace(character, f"\\{character}")
     return f"%{keyword}%"
@@ -108,7 +108,7 @@ def _selection(tag: str | None, keyword: str | None) -> tuple[str, list[str]]:
         parameters.append(tag)
     if keyword is not None:
         conditions.append(_MENTIONS_KEYWORD)
-        parameters += [_mentioning(keyword)] * 2
+        parameters += [_like_pattern(keyword)] * 2
     return " AND ".join(conditions), parameters
 
 

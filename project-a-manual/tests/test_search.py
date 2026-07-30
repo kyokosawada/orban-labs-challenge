@@ -64,6 +64,14 @@ def test_capitalisation_is_ignored_beyond_the_ascii_alphabet(client):
     assert titles_found(client, q="CAFÉ") == ["Café"]
 
 
+def test_a_letter_that_lowercases_to_itself_matches_only_itself(client):
+    create_note(client, title="Straße")
+    create_note(client, title="STRASSE")
+
+    assert titles_found(client, q="straße") == ["Straße"]
+    assert titles_found(client, q="strasse") == ["STRASSE"]
+
+
 def test_part_of_a_word_matches_the_whole_word(client):
     create_note(client, title="Invoices")
 
