@@ -33,7 +33,7 @@ _CARRIES_TAG = """
 """
 
 _MENTIONS_KEYWORD = """
-    (title LIKE ? ESCAPE '\\' OR body LIKE ? ESCAPE '\\')
+    (casefold(title) LIKE ? ESCAPE '\\' OR casefold(body) LIKE ? ESCAPE '\\')
 """
 
 _LIKE_SPECIAL_CHARACTERS = ("\\", "%", "_")
@@ -94,6 +94,7 @@ def _attach_tags(connection: sqlite3.Connection, note_id: int, tags: list[str]) 
 
 
 def _mentioning(keyword: str) -> str:
+    keyword = keyword.casefold()
     for character in _LIKE_SPECIAL_CHARACTERS:
         keyword = keyword.replace(character, f"\\{character}")
     return f"%{keyword}%"

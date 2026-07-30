@@ -57,6 +57,13 @@ def test_a_keyword_ignores_capitalisation(client):
     assert titles_found(client, q="INVOICE") == ["Invoice"]
 
 
+def test_capitalisation_is_ignored_beyond_the_ascii_alphabet(client):
+    create_note(client, title="Café")
+
+    assert titles_found(client, q="café") == ["Café"]
+    assert titles_found(client, q="CAFÉ") == ["Café"]
+
+
 def test_part_of_a_word_matches_the_whole_word(client):
     create_note(client, title="Invoices")
 

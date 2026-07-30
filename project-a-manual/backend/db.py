@@ -43,6 +43,7 @@ def connect(database_path: str) -> sqlite3.Connection:
     connection = sqlite3.connect(database_path, check_same_thread=False)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys = ON")
+    connection.create_function("casefold", 1, str.casefold, deterministic=True)
     return connection
 
 
