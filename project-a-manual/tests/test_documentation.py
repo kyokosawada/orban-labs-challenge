@@ -144,7 +144,9 @@ def test_the_documentation_is_readable_without_a_key(anonymous_client, address):
     assert anonymous_client.get(address).status_code == 200
 
 
-def test_the_documentation_carries_no_note_and_no_key(client, anonymous_client, api_key):
+def test_the_documentation_carries_no_note_and_no_key(
+    client, anonymous_client, api_key
+):
     written = client.post("/notes", json={"title": "A private note"})
     assert written.status_code == 201, written.text
 

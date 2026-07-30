@@ -2,15 +2,6 @@ from datetime import datetime
 
 import pytest
 
-from backend.config import get_settings
-from backend.db import connect
-
-
-def create_note(client, **payload):
-    response = client.post("/notes", json=payload)
-    assert response.status_code == 201, response.text
-    return response.json()
-
 
 def edit_note(client, note_id, **payload):
     response = client.put(f"/notes/{note_id}", json=payload)
@@ -34,19 +25,7 @@ def moment(value):
     return datetime.fromisoformat(value)
 
 
-def delete_note(note):
-    connection = connect(get_settings().database_path)
-    try:
-        with connection:
-            connection.execute(
-                "UPDATE notes SET deleted_at = ? WHERE id = ?",
-                ("2026-02-03T09:00:00+00:00", note["id"]),
-            )
-    finally:
-        connection.close()
-
-
-def test_a_notes_title_and_body_are_changed(client):
+def test_a_notes_title_and_body_are_changed(client, create_note):
     written = create_note(client, title="Buy milk", body="Semi-skimmed")
 
     edited = edit_note(client, written["id"], title="Buy oat milk", body="Barista")
@@ -55,7 +34,7 @@ def test_a_notes_title_and_body_are_changed(client):
     assert edited["body"] == "Barista"
 
 
-def test_the_listing_shows_the_change_rather_than_what_was_written(client):
+def test_the_listing_shows_the_change_rather_than_what_was_written(client, create_note):
     written = create_note(client, title="Buy milk", body="Semi-skimmed")
 
     edited = edit_note(client, written["id"], title="Buy oat milk", body="Barista")
@@ -63,7 +42,7 @@ def test_the_listing_shows_the_change_rather_than_what_was_written(client):
     assert listed(client) == [edited]
 
 
-def test_an_edit_changes_a_note_rather_than_writing_a_second_one(client):
+def test_an_edit_changes_a_note_rather_than_writing_a_second_one(client, create_note):
     written = create_note(client, title="Buy milk")
 
     edited = edit_note(client, written["id"], title="Buy oat milk")
@@ -73,7 +52,7 @@ def test_an_edit_changes_a_note_rather_than_writing_a_second_one(client):
     assert len(listed(client)) == 1
 
 
-def test_a_note_records_when_it_was_last_changed(client):
+def test_a_note_records_when_it_was_last_changed(client, create_note):
     written = create_note(client, title="Buy milk")
 
     edited = edit_note(client, written["id"], title="Buy oat milk")
@@ -81,7 +60,9 @@ def test_a_note_records_when_it_was_last_changed(client):
     assert moment(edited["updated_at"]) > moment(written["updated_at"])
 
 
-def test_the_time_a_note_was_last_changed_is_not_accepted_from_the_caller(client):
+def test_the_time_a_note_was_last_changed_is_not_accepted_from_the_caller(
+    client, create_note
+):
     written = create_note(client, title="Buy milk")
 
     response = client.put(
@@ -96,7 +77,7 @@ def test_the_time_a_note_was_last_changed_is_not_accepted_from_the_caller(client
     assert listed(client) == [written]
 
 
-def test_an_edited_note_rises_to_the_top_of_the_listing(client):
+def test_an_edited_note_rises_to_the_top_of_the_listing(client, create_note):
     oldest = create_note(client, title="Oldest")
     create_note(client, title="Middle")
     create_note(client, title="Newest")
@@ -110,7 +91,7 @@ def test_an_edited_note_rises_to_the_top_of_the_listing(client):
     ]
 
 
-def test_a_notes_tags_are_replaced_wholesale(client):
+def test_a_notes_tags_are_replaced_wholesale(client, create_note):
     written = create_note(client, title="Invoice", tags=["work", "finance"])
 
     edited = edit_note(client, written["id"], title="Invoice", tags=["home"])
@@ -120,7 +101,7 @@ def test_a_notes_tags_are_replaced_wholesale(client):
     assert listed(client, tag="work") == []
 
 
-def test_a_notes_tags_can_be_replaced_with_none(client):
+def test_a_notes_tags_can_be_replaced_with_none(client, create_note):
     written = create_note(client, title="Invoice", tags=["work"])
 
     edited = edit_note(client, written["id"], title="Invoice", tags=[])
@@ -129,19 +110,19 @@ def test_a_notes_tags_can_be_replaced_with_none(client):
     assert listed(client, tag="work") == []
 
 
-def test_an_edit_that_names_no_tags_leaves_the_note_carrying_none(client):
+def test_an_edit_that_names_no_tags_leaves_the_note_carrying_none(client, create_note):
     written = create_note(client, title="Invoice", tags=["work"])
 
     assert edit_note(client, written["id"], title="Invoice")["tags"] == []
 
 
-def test_an_edit_that_names_no_body_leaves_the_note_without_one(client):
+def test_an_edit_that_names_no_body_leaves_the_note_without_one(client, create_note):
     written = create_note(client, title="Invoice", body="Due Friday")
 
     assert edit_note(client, written["id"], title="Invoice")["body"] == ""
 
 
-def test_a_body_can_be_emptied_by_an_edit(client):
+def test_a_body_can_be_emptied_by_an_edit(client, create_note):
     written = create_note(client, title="Invoice", body="Due Friday")
 
     edited = edit_note(client, written["id"], title="Invoice", body="")
@@ -150,7 +131,9 @@ def test_a_body_can_be_emptied_by_an_edit(client):
     assert listed(client) == [edited]
 
 
-def test_replacing_tags_does_not_disturb_the_same_tags_on_other_notes(client):
+def test_replacing_tags_does_not_disturb_the_same_tags_on_other_notes(
+    client, create_note
+):
     invoice = create_note(client, title="Invoice", tags=["work", "finance"])
     standup = create_note(client, title="Standup", tags=["work"])
 
@@ -160,7 +143,9 @@ def test_replacing_tags_does_not_disturb_the_same_tags_on_other_notes(client):
     assert tags_in_use(client) == ["home", "work"]
 
 
-def test_a_tag_the_edit_left_attached_to_nothing_stops_being_offered(client):
+def test_a_tag_the_edit_left_attached_to_nothing_stops_being_offered(
+    client, create_note
+):
     invoice = create_note(client, title="Invoice", tags=["work", "finance"])
     create_note(client, title="Recipe", tags=["cooking"])
 
@@ -169,7 +154,7 @@ def test_a_tag_the_edit_left_attached_to_nothing_stops_being_offered(client):
     assert tags_in_use(client) == ["cooking", "finance"]
 
 
-def test_a_tag_an_edit_brought_back_is_offered_again(client):
+def test_a_tag_an_edit_brought_back_is_offered_again(client, create_note):
     invoice = create_note(client, title="Invoice", tags=["work"])
 
     edit_note(client, invoice["id"], title="Invoice", tags=[])
@@ -178,7 +163,9 @@ def test_a_tag_an_edit_brought_back_is_offered_again(client):
     assert tags_in_use(client) == ["work"]
 
 
-def test_tags_are_stored_in_their_normalised_form_as_they_are_on_creation(client):
+def test_tags_are_stored_in_their_normalised_form_as_they_are_on_creation(
+    client, create_note
+):
     written = create_note(client, title="Invoice")
 
     edited = edit_note(
@@ -205,9 +192,11 @@ def test_a_refused_edit_writes_no_note_and_no_tag(client):
     assert tags_in_use(client) == []
 
 
-def test_editing_a_deleted_note_is_refused_as_though_it_never_existed(client):
+def test_editing_a_deleted_note_is_refused_as_though_it_never_existed(
+    client, create_note, delete_note
+):
     written = create_note(client, title="Invoice", tags=["work"])
-    delete_note(written)
+    delete_note(client, written)
 
     response = client.put(f"/notes/{written['id']}", json={"title": "Invoice again"})
 
@@ -216,7 +205,7 @@ def test_editing_a_deleted_note_is_refused_as_though_it_never_existed(client):
 
 
 def test_an_edit_without_a_key_is_refused_and_changes_nothing(
-    client, anonymous_client
+    client, anonymous_client, create_note
 ):
     written = create_note(client, title="Buy milk")
 
@@ -247,7 +236,7 @@ REJECTED_EDITS = [
 
 @pytest.mark.parametrize("payload, offending_field", REJECTED_EDITS)
 def test_an_edit_obeys_the_rules_that_applied_on_creation(
-    client, payload, offending_field
+    client, payload, offending_field, create_note
 ):
     written = create_note(client, title="Invoice", body="Due Friday", tags=["work"])
 
@@ -260,7 +249,9 @@ def test_an_edit_obeys_the_rules_that_applied_on_creation(
 
 
 @pytest.mark.parametrize("payload, offending_field", REJECTED_EDITS)
-def test_a_rejected_edit_leaves_the_note_as_it_was(client, payload, offending_field):
+def test_a_rejected_edit_leaves_the_note_as_it_was(
+    client, payload, offending_field, create_note
+):
     written = create_note(client, title="Invoice", body="Due Friday", tags=["work"])
 
     client.put(f"/notes/{written['id']}", json=payload)
@@ -269,13 +260,13 @@ def test_a_rejected_edit_leaves_the_note_as_it_was(client, payload, offending_fi
     assert tags_in_use(client) == ["work"]
 
 
-def test_an_edit_keeps_a_title_without_its_surrounding_spaces(client):
+def test_an_edit_keeps_a_title_without_its_surrounding_spaces(client, create_note):
     written = create_note(client, title="Invoice")
 
     assert edit_note(client, written["id"], title="   Padded   ")["title"] == "Padded"
 
 
-def test_an_edited_note_survives_a_restart(client, build_client):
+def test_an_edited_note_survives_a_restart(client, build_client, create_note):
     written = create_note(client, title="Invoice", tags=["work"])
 
     edited = edit_note(client, written["id"], title="Invoice, revised", tags=["home"])

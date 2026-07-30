@@ -1,58 +1,36 @@
-from backend.config import get_settings
-from backend.db import connect
-
-
-def create_note(client, **payload):
-    response = client.post("/notes", json=payload)
-    assert response.status_code == 201, response.text
-    return response.json()
-
-
-def in_storage(statement, parameters):
-    connection = connect(get_settings().database_path)
-    try:
-        with connection:
-            return connection.execute(statement, parameters).fetchall()
-    finally:
-        connection.close()
-
-
-def delete_note(client, note):
-    response = client.delete(f"/notes/{note['id']}")
-    assert response.status_code == 204, response.text
-
-
-def take_tag_off_every_note(name):
+def take_tag_off_every_note(in_storage, name):
     in_storage(
         "DELETE FROM note_tags WHERE tag_id IN (SELECT id FROM tags WHERE name = ?)",
         (name,),
     )
 
 
-def test_a_note_is_written_carrying_several_tags(client):
+def test_a_note_is_written_carrying_several_tags(client, create_note):
     created = create_note(client, title="Invoice", tags=["work", "finance"])
 
     assert created["tags"] == ["finance", "work"]
     assert client.get("/notes").json() == [created]
 
 
-def test_a_note_written_with_no_tags_carries_none(client):
+def test_a_note_written_with_no_tags_carries_none(client, create_note):
     assert create_note(client, title="Unfiled")["tags"] == []
 
 
-def test_differently_capitalised_spellings_are_one_tag(client):
+def test_differently_capitalised_spellings_are_one_tag(client, create_note):
     created = create_note(client, title="Invoice", tags=["Work", "work", "WORK"])
 
     assert created["tags"] == ["work"]
 
 
-def test_stray_spaces_around_a_tag_do_not_make_a_second_tag(client):
+def test_stray_spaces_around_a_tag_do_not_make_a_second_tag(client, create_note):
     created = create_note(client, title="Invoice", tags=["  work  ", "work"])
 
     assert created["tags"] == ["work"]
 
 
-def test_duplicate_tags_in_one_request_collapse_rather_than_failing(client):
+def test_duplicate_tags_in_one_request_collapse_rather_than_failing(
+    client, create_note
+):
     created = create_note(
         client, title="Invoice", tags=["work", "work", "finance", "work"]
     )
@@ -66,7 +44,7 @@ def titles_tagged(client, tag):
     return [note["title"] for note in response.json()]
 
 
-def test_the_listing_narrows_to_the_notes_carrying_one_tag(client):
+def test_the_listing_narrows_to_the_notes_carrying_one_tag(client, create_note):
     create_note(client, title="Invoice", tags=["work", "finance"])
     create_note(client, title="Standup", tags=["work"])
     create_note(client, title="Recipe", tags=["cooking"])
@@ -76,14 +54,16 @@ def test_the_listing_narrows_to_the_notes_carrying_one_tag(client):
     assert titles_tagged(client, "cooking") == ["Recipe"]
 
 
-def test_the_filter_is_read_in_its_normalised_form_like_the_tag_itself(client):
+def test_the_filter_is_read_in_its_normalised_form_like_the_tag_itself(
+    client, create_note
+):
     create_note(client, title="Invoice", tags=["Work"])
 
     assert titles_tagged(client, "WORK") == ["Invoice"]
     assert titles_tagged(client, "  work  ") == ["Invoice"]
 
 
-def test_the_filter_matches_a_whole_tag_rather_than_part_of_one(client):
+def test_the_filter_matches_a_whole_tag_rather_than_part_of_one(client, create_note):
     create_note(client, title="Homework", tags=["homework"])
     create_note(client, title="In progress", tags=["work-in-progress"])
     create_note(client, title="Invoice", tags=["work"])
@@ -91,13 +71,15 @@ def test_the_filter_matches_a_whole_tag_rather_than_part_of_one(client):
     assert titles_tagged(client, "work") == ["Invoice"]
 
 
-def test_a_tag_no_note_carries_finds_nothing_rather_than_everything(client):
+def test_a_tag_no_note_carries_finds_nothing_rather_than_everything(
+    client, create_note
+):
     create_note(client, title="Invoice", tags=["work"])
 
     assert titles_tagged(client, "gardening") == []
 
 
-def test_an_empty_filter_returns_everything_rather_than_nothing(client):
+def test_an_empty_filter_returns_everything_rather_than_nothing(client, create_note):
     create_note(client, title="Invoice", tags=["work"])
     create_note(client, title="Unfiled")
 
@@ -111,7 +93,7 @@ def tags_in_use(client):
     return response.json()
 
 
-def test_the_tags_offered_are_the_ones_notes_actually_carry(client):
+def test_the_tags_offered_are_the_ones_notes_actually_carry(client, create_note):
     create_note(client, title="Invoice", tags=["work", "finance"])
     create_note(client, title="Recipe", tags=["cooking"])
     create_note(client, title="Unfiled")
@@ -119,29 +101,33 @@ def test_the_tags_offered_are_the_ones_notes_actually_carry(client):
     assert tags_in_use(client) == ["cooking", "finance", "work"]
 
 
-def test_nothing_is_offered_before_anything_is_tagged(client):
+def test_nothing_is_offered_before_anything_is_tagged(client, create_note):
     create_note(client, title="Unfiled")
 
     assert tags_in_use(client) == []
 
 
-def test_a_tag_two_notes_share_is_offered_once(client):
+def test_a_tag_two_notes_share_is_offered_once(client, create_note):
     create_note(client, title="Invoice", tags=["Work"])
     create_note(client, title="Standup", tags=["work"])
 
     assert tags_in_use(client) == ["work"]
 
 
-def test_a_tag_nothing_carries_is_kept_in_storage_but_never_offered(client):
+def test_a_tag_nothing_carries_is_kept_in_storage_but_never_offered(
+    client, create_note, in_storage
+):
     create_note(client, title="Invoice", tags=["work", "finance"])
 
-    take_tag_off_every_note("work")
+    take_tag_off_every_note(in_storage, "work")
 
     assert tags_in_use(client) == ["finance"]
     assert in_storage("SELECT name FROM tags WHERE name = ?", ("work",))
 
 
-def test_a_tag_whose_only_notes_are_deleted_stops_being_offered(client):
+def test_a_tag_whose_only_notes_are_deleted_stops_being_offered(
+    client, create_note, delete_note
+):
     invoice = create_note(client, title="Invoice", tags=["work"])
     create_note(client, title="Recipe", tags=["cooking"])
 
@@ -150,7 +136,9 @@ def test_a_tag_whose_only_notes_are_deleted_stops_being_offered(client):
     assert tags_in_use(client) == ["cooking"]
 
 
-def test_a_tag_a_live_note_still_carries_goes_on_being_offered(client):
+def test_a_tag_a_live_note_still_carries_goes_on_being_offered(
+    client, create_note, delete_note
+):
     invoice = create_note(client, title="Invoice", tags=["work"])
     create_note(client, title="Standup", tags=["work"])
 
@@ -159,7 +147,7 @@ def test_a_tag_a_live_note_still_carries_goes_on_being_offered(client):
     assert tags_in_use(client) == ["work"]
 
 
-def test_a_deleted_note_is_not_found_by_its_tag(client):
+def test_a_deleted_note_is_not_found_by_its_tag(client, create_note, delete_note):
     invoice = create_note(client, title="Invoice", tags=["work"])
     create_note(client, title="Standup", tags=["work"])
 

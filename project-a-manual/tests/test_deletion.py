@@ -1,34 +1,10 @@
-from backend.config import get_settings
-from backend.db import connect
-
-
-def create_note(client, **payload):
-    response = client.post("/notes", json=payload)
-    assert response.status_code == 201, response.text
-    return response.json()
-
-
-def delete_note(client, note):
-    response = client.delete(f"/notes/{note['id']}")
-    assert response.status_code == 204, response.text
-    return response
-
-
 def titles_listed(client):
     response = client.get("/notes")
     assert response.status_code == 200, response.text
     return [note["title"] for note in response.json()]
 
 
-def in_storage(statement, parameters):
-    connection = connect(get_settings().database_path)
-    try:
-        return connection.execute(statement, parameters).fetchall()
-    finally:
-        connection.close()
-
-
-def test_a_deleted_note_disappears_from_the_listing(client):
+def test_a_deleted_note_disappears_from_the_listing(client, create_note, delete_note):
     invoice = create_note(client, title="Invoice")
 
     delete_note(client, invoice)
@@ -36,7 +12,7 @@ def test_a_deleted_note_disappears_from_the_listing(client):
     assert titles_listed(client) == []
 
 
-def test_deleting_one_note_leaves_the_others_alone(client):
+def test_deleting_one_note_leaves_the_others_alone(client, create_note, delete_note):
     create_note(client, title="Keep me")
     invoice = create_note(client, title="Throw me away")
     create_note(client, title="Keep me too")
@@ -46,7 +22,7 @@ def test_deleting_one_note_leaves_the_others_alone(client):
     assert titles_listed(client) == ["Keep me too", "Keep me"]
 
 
-def test_deleting_answers_with_nothing_to_read(client):
+def test_deleting_answers_with_nothing_to_read(client, create_note, delete_note):
     invoice = create_note(client, title="Invoice")
 
     response = delete_note(client, invoice)
@@ -54,7 +30,9 @@ def test_deleting_answers_with_nothing_to_read(client):
     assert response.content == b""
 
 
-def test_a_deleted_note_stays_in_storage_to_be_recovered_by_hand(client):
+def test_a_deleted_note_stays_in_storage_to_be_recovered_by_hand(
+    client, create_note, delete_note, in_storage
+):
     invoice = create_note(client, title="Deleted by mistake", body="Still wanted")
 
     delete_note(client, invoice)
@@ -68,7 +46,7 @@ def test_a_deleted_note_stays_in_storage_to_be_recovered_by_hand(client):
     assert retained[0]["deleted_at"] is not None
 
 
-def test_a_note_is_read_in_full_by_its_identifier(client):
+def test_a_note_is_read_in_full_by_its_identifier(client, create_note):
     invoice = create_note(client, title="Invoice", body="Due Friday", tags=["work"])
 
     response = client.get(f"/notes/{invoice['id']}")
@@ -77,7 +55,9 @@ def test_a_note_is_read_in_full_by_its_identifier(client):
     assert response.json() == invoice
 
 
-def test_a_deleted_note_cannot_be_fetched_by_its_identifier(client):
+def test_a_deleted_note_cannot_be_fetched_by_its_identifier(
+    client, create_note, delete_note
+):
     invoice = create_note(client, title="Invoice")
 
     delete_note(client, invoice)
@@ -87,7 +67,9 @@ def test_a_deleted_note_cannot_be_fetched_by_its_identifier(client):
     assert response.json()["code"] == "not_found"
 
 
-def test_a_deleted_note_answers_exactly_as_one_that_was_never_written(client):
+def test_a_deleted_note_answers_exactly_as_one_that_was_never_written(
+    client, create_note, delete_note
+):
     invoice = create_note(client, title="Invoice")
     delete_note(client, invoice)
 
@@ -98,7 +80,9 @@ def test_a_deleted_note_answers_exactly_as_one_that_was_never_written(client):
     assert deleted.json() == never_written.json()
 
 
-def test_deleting_a_note_twice_answers_as_though_it_never_existed(client):
+def test_deleting_a_note_twice_answers_as_though_it_never_existed(
+    client, create_note, delete_note
+):
     invoice = create_note(client, title="Invoice")
     delete_note(client, invoice)
 
@@ -127,7 +111,9 @@ def test_an_identifier_that_is_not_a_number_is_refused_naming_the_field(client):
     assert [field["field"] for field in error["fields"]] == ["note_id"]
 
 
-def test_a_deleted_note_is_still_gone_after_a_restart(client, build_client):
+def test_a_deleted_note_is_still_gone_after_a_restart(
+    client, build_client, create_note, delete_note
+):
     invoice = create_note(client, title="Invoice")
     create_note(client, title="Standup")
 
@@ -141,7 +127,9 @@ def test_a_deleted_note_is_still_gone_after_a_restart(client, build_client):
 PROBES = ["Invoice", "invoice", "March", "work", ""]
 
 
-def test_no_documented_filter_brings_a_deleted_note_back_into_the_listing(client):
+def test_no_documented_filter_brings_a_deleted_note_back_into_the_listing(
+    client, create_note, delete_note
+):
     invoice = create_note(
         client, title="Invoice for March", body="Send it before Friday", tags=["work"]
     )

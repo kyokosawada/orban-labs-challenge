@@ -4,6 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from backend.config import API_KEY_HEADER, get_settings
+from backend.db import connect
 
 
 @pytest.fixture
@@ -47,3 +48,36 @@ def client(build_client) -> Iterator[TestClient]:
 def anonymous_client(build_client) -> Iterator[TestClient]:
     with build_client(authenticate=False) as test_client:
         yield test_client
+
+
+@pytest.fixture
+def create_note():
+    def create(client: TestClient, **payload) -> dict:
+        response = client.post("/notes", json=payload)
+        assert response.status_code == 201, response.text
+        return response.json()
+
+    return create
+
+
+@pytest.fixture
+def delete_note():
+    def delete(client: TestClient, note: dict):
+        response = client.delete(f"/notes/{note['id']}")
+        assert response.status_code == 204, response.text
+        return response
+
+    return delete
+
+
+@pytest.fixture
+def in_storage():
+    def read(statement: str, parameters: tuple):
+        connection = connect(get_settings().database_path)
+        try:
+            with connection:
+                return connection.execute(statement, parameters).fetchall()
+        finally:
+            connection.close()
+
+    return read
