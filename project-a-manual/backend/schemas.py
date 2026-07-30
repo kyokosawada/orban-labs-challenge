@@ -103,8 +103,8 @@ class Note(BaseModel):
                 "title": "Chase the Fenwick invoice",
                 "body": "Sent 3 March, still unpaid.",
                 "tags": ["invoices", "work"],
-                "created_at": "2026-03-17T09:14:02.481+00:00",
-                "updated_at": "2026-03-19T16:02:55.107+00:00",
+                "created_at": "2026-03-17T09:14:02.481027Z",
+                "updated_at": "2026-03-19T16:02:55.107884Z",
             }
         }
     )

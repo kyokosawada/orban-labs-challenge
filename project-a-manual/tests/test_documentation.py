@@ -1,9 +1,12 @@
+import re
+
 import pytest
 from fastapi.routing import APIRoute
 
 from backend.config import API_KEY_HEADER
 
 DOCUMENTATION_ADDRESSES = ["/openapi.json", "/docs", "/redoc"]
+TIMESTAMP = r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z"
 
 
 def published(client):
@@ -119,6 +122,9 @@ def test_the_note_the_schema_shows_is_shaped_like_the_one_the_api_answers_with(c
     assert written.status_code == 201, written.text
     assert set(shown) == set(written.json())
     assert set(shown) == set(schema["components"]["schemas"]["Note"]["properties"])
+    for stamp in ("created_at", "updated_at"):
+        assert re.fullmatch(TIMESTAMP, written.json()[stamp]), stamp
+        assert re.fullmatch(TIMESTAMP, shown[stamp]), stamp
 
 
 def test_deleting_documents_that_it_answers_with_nothing_to_read(client):
