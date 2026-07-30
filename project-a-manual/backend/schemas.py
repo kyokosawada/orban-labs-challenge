@@ -9,7 +9,7 @@ BODY_MAX_LENGTH = 10_000
 TAG_MAX_LENGTH = 50
 TAGS_PER_NOTE_MAX = 20
 
-_ALLOWED_TAG = re.compile(r"^[a-z0-9_-]+$")
+_ALLOWED_TAG = re.compile(r"^[\w-]+$")
 
 
 def _trimmed_title(value: str) -> str:

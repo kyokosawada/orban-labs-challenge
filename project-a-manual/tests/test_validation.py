@@ -89,6 +89,8 @@ ACCEPTED_PAYLOADS = [
     pytest.param({"title": "Fine", "tags": []}, id="no-tags-at-all"),
     pytest.param({"title": "Fine", "tags": ["x" * 50]}, id="tag-at-the-limit"),
     pytest.param({"title": "Fine", "tags": ["a-b_c9"]}, id="tag-of-every-allowed-character"),
+    pytest.param({"title": "Fine", "tags": ["café"]}, id="tag-of-accented-letters"),
+    pytest.param({"title": "Fine", "tags": ["日記"]}, id="tag-of-another-script"),
     pytest.param(
         {"title": "Fine", "tags": [f"tag-{index}" for index in range(20)]},
         id="twenty-tags",
