@@ -52,7 +52,7 @@ export default function ShortenView({
   const [failure, setFailure] = useState<ErrorEnvelope | null>(null);
   const [shortening, setShortening] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [minted, setMinted] = useState(0);
+  const [mintedCount, setMintedCount] = useState(0);
 
   const shortUrl = shortLink ? `${publicBaseUrl}/${shortLink.short_code}` : null;
 
@@ -76,7 +76,7 @@ export default function ShortenView({
       setFailure(null);
       setDestination("");
       setExpiry("");
-      setMinted((count) => count + 1);
+      setMintedCount((count) => count + 1);
     } catch {
       setShortLink(null);
       setFailure(NETWORK_FAILURE);
@@ -209,7 +209,7 @@ export default function ShortenView({
         </section>
       ) : null}
 
-      <DashboardView publicBaseUrl={publicBaseUrl} refreshSignal={minted} />
+      <DashboardView publicBaseUrl={publicBaseUrl} mintedCount={mintedCount} />
     </main>
   );
 }

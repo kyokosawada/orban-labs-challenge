@@ -11,6 +11,11 @@ import type { ShortLink } from "./short-link";
 
 const REFRESH_INTERVAL_MS = 5000;
 
+const UNREADABLE_LIST: ErrorEnvelope = {
+  code: "unexpected_response",
+  message: "The server answered with something that is not a list of short links.",
+};
+
 function formatCreatedAt(value: string): string {
   const moment = new Date(value);
   return Number.isNaN(moment.getTime())
@@ -23,10 +28,10 @@ function formatCreatedAt(value: string): string {
 
 export default function DashboardView({
   publicBaseUrl,
-  refreshSignal,
+  mintedCount,
 }: {
   publicBaseUrl: string;
-  refreshSignal: number;
+  mintedCount: number;
 }) {
   const [shortLinks, setShortLinks] = useState<ShortLink[] | null>(null);
   const [failure, setFailure] = useState<ErrorEnvelope | null>(null);
@@ -37,6 +42,10 @@ export default function DashboardView({
       const payload = await readJson(response);
       if (!response.ok) {
         setFailure(describeFailure(response.status, payload));
+        return;
+      }
+      if (!Array.isArray(payload)) {
+        setFailure(UNREADABLE_LIST);
         return;
       }
       setShortLinks(payload as ShortLink[]);
@@ -50,7 +59,7 @@ export default function DashboardView({
     void load();
     const timer = window.setInterval(() => void load(), REFRESH_INTERVAL_MS);
     return () => window.clearInterval(timer);
-  }, [load, refreshSignal]);
+  }, [load, mintedCount]);
 
   const loading = shortLinks === null && failure === null;
 
@@ -58,15 +67,20 @@ export default function DashboardView({
     <section className="dashboard card">
       <h2>Your short links</h2>
       <p className="dashboard-note">
-        Clicks count every request that reached a Destination, including
-        automated previews by chat applications. The figures refresh on their
-        own every few seconds.
+        A Click is one request that resolved to a Destination. The number counts
+        requests, not people: an automated preview by a chat application counts,
+        and following the same link twice counts twice. The figures refresh on
+        their own every few seconds.
       </p>
 
       {failure ? (
         <div className="alert" role="alert">
           <p>{failure.message}</p>
-          {shortLinks ? <p className="alert-note">Showing the last figures it managed to read.</p> : null}
+          {shortLinks ? (
+            <p className="alert-note">
+              Showing the last figures it managed to read.
+            </p>
+          ) : null}
         </div>
       ) : null}
 
