@@ -5,7 +5,8 @@ database that already has the table. Adding `clicks` to that statement therefore
 existing database one column short, and every request against it answering `no such column`.
 
 Startup now also compares the declared columns against the ones the database has and runs the
-`ALTER TABLE ADD COLUMN` for any that are missing. Both statements are literal SQL in
+`ALTER TABLE ADD COLUMN` for any that are missing. `expires_at` is declared there for the same
+reason `clicks` is. Both statements are literal SQL in
 `backend/db.py`; the column list is the only thing read from the database, through
 `pragma_table_info` with a bound parameter.
 
