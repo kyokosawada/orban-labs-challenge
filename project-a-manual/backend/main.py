@@ -5,7 +5,7 @@ from fastapi import FastAPI
 
 from .db import initialise_database
 from .errors import register_error_handlers
-from .routes import router
+from .routes import router, tags_router
 
 DESCRIPTION = """
 A store for Notes. Every endpoint requires an `X-API-Key` header.
@@ -30,6 +30,7 @@ def create_app() -> FastAPI:
     )
     register_error_handlers(app)
     app.include_router(router)
+    app.include_router(tags_router)
     return app
 
 

@@ -9,16 +9,24 @@ from .db import get_connection
 from .errors import ErrorResponse
 from .schemas import Note, NoteCreate, TagFilter
 
-router = APIRouter(
-    prefix="/notes",
-    tags=["notes"],
-    dependencies=[Depends(require_api_key)],
-    responses={
-        status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse},
-        status.HTTP_422_UNPROCESSABLE_ENTITY: {"model": ErrorResponse},
-        status.HTTP_500_INTERNAL_SERVER_ERROR: {"model": ErrorResponse},
-    },
-)
+FAILURE_RESPONSES = {
+    status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse},
+    status.HTTP_422_UNPROCESSABLE_ENTITY: {"model": ErrorResponse},
+    status.HTTP_500_INTERNAL_SERVER_ERROR: {"model": ErrorResponse},
+}
+
+
+def _authenticated_router(prefix: str, group: str) -> APIRouter:
+    return APIRouter(
+        prefix=prefix,
+        tags=[group],
+        dependencies=[Depends(require_api_key)],
+        responses=FAILURE_RESPONSES,
+    )
+
+
+router = _authenticated_router("/notes", "notes")
+tags_router = _authenticated_router("/tags", "tags")
 
 Connection = Annotated[sqlite3.Connection, Depends(get_connection)]
 
@@ -48,3 +56,12 @@ TagQuery = Annotated[
 )
 def list_notes(connection: Connection, tag: TagQuery = None) -> list[Note]:
     return repository.list_notes(connection, tag)
+
+
+@tags_router.get(
+    "",
+    response_model=list[str],
+    summary="List the Tags in use, alphabetically",
+)
+def list_tags_in_use(connection: Connection) -> list[str]:
+    return repository.list_tags_in_use(connection)

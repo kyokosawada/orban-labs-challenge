@@ -45,6 +45,16 @@ _SELECT_TAGS_OF_NOTES = """
 """
 
 
+_SELECT_TAGS_IN_USE = f"""
+    SELECT DISTINCT tags.name
+    FROM tags
+    JOIN note_tags ON note_tags.tag_id = tags.id
+    JOIN notes ON notes.id = note_tags.note_id
+    WHERE notes.{_NOT_DELETED}
+    ORDER BY tags.name
+"""
+
+
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -103,3 +113,7 @@ def list_notes(
     rows = connection.execute(statement, parameters).fetchall()
     tags = _tags_of_notes(connection, [row["id"] for row in rows])
     return [_to_note(row, tags[row["id"]]) for row in rows]
+
+
+def list_tags_in_use(connection: sqlite3.Connection) -> list[str]:
+    return [row["name"] for row in connection.execute(_SELECT_TAGS_IN_USE)]

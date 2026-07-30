@@ -1,7 +1,34 @@
+from backend.config import get_settings
+from backend.db import connect
+
+
 def create_note(client, **payload):
     response = client.post("/notes", json=payload)
     assert response.status_code == 201, response.text
     return response.json()
+
+
+def in_storage(statement, parameters):
+    connection = connect(get_settings().database_path)
+    try:
+        with connection:
+            return connection.execute(statement, parameters).fetchall()
+    finally:
+        connection.close()
+
+
+def delete_note(note):
+    in_storage(
+        "UPDATE notes SET deleted_at = ? WHERE id = ?",
+        ("2026-02-03T09:00:00+00:00", note["id"]),
+    )
+
+
+def take_tag_off_every_note(name):
+    in_storage(
+        "DELETE FROM note_tags WHERE tag_id IN (SELECT id FROM tags WHERE name = ?)",
+        (name,),
+    )
 
 
 def test_a_note_is_written_carrying_several_tags(client):
@@ -78,6 +105,75 @@ def test_an_empty_filter_returns_everything_rather_than_nothing(client):
 
     assert titles_tagged(client, "") == ["Unfiled", "Invoice"]
     assert titles_tagged(client, "   ") == ["Unfiled", "Invoice"]
+
+
+def tags_in_use(client):
+    response = client.get("/tags")
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+def test_the_tags_offered_are_the_ones_notes_actually_carry(client):
+    create_note(client, title="Invoice", tags=["work", "finance"])
+    create_note(client, title="Recipe", tags=["cooking"])
+    create_note(client, title="Unfiled")
+
+    assert tags_in_use(client) == ["cooking", "finance", "work"]
+
+
+def test_nothing_is_offered_before_anything_is_tagged(client):
+    create_note(client, title="Unfiled")
+
+    assert tags_in_use(client) == []
+
+
+def test_a_tag_two_notes_share_is_offered_once(client):
+    create_note(client, title="Invoice", tags=["Work"])
+    create_note(client, title="Standup", tags=["work"])
+
+    assert tags_in_use(client) == ["work"]
+
+
+def test_a_tag_nothing_carries_is_kept_in_storage_but_never_offered(client):
+    create_note(client, title="Invoice", tags=["work", "finance"])
+
+    take_tag_off_every_note("work")
+
+    assert tags_in_use(client) == ["finance"]
+    assert in_storage("SELECT name FROM tags WHERE name = ?", ("work",))
+
+
+def test_a_tag_whose_only_notes_are_deleted_stops_being_offered(client):
+    invoice = create_note(client, title="Invoice", tags=["work"])
+    create_note(client, title="Recipe", tags=["cooking"])
+
+    delete_note(invoice)
+
+    assert tags_in_use(client) == ["cooking"]
+
+
+def test_a_tag_a_live_note_still_carries_goes_on_being_offered(client):
+    invoice = create_note(client, title="Invoice", tags=["work"])
+    create_note(client, title="Standup", tags=["work"])
+
+    delete_note(invoice)
+
+    assert tags_in_use(client) == ["work"]
+
+
+def test_a_deleted_note_is_not_found_by_its_tag(client):
+    invoice = create_note(client, title="Invoice", tags=["work"])
+    create_note(client, title="Standup", tags=["work"])
+
+    delete_note(invoice)
+
+    assert titles_tagged(client, "work") == ["Standup"]
+
+
+def test_a_refused_note_leaves_no_tag_behind_to_be_offered(client):
+    client.post("/notes", json={"title": "", "tags": ["work"]})
+
+    assert tags_in_use(client) == []
 
 
 def test_a_filter_that_could_not_be_a_tag_is_refused_naming_the_field(client):

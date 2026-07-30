@@ -5,6 +5,7 @@ from backend.config import API_KEY_HEADER
 REQUESTS = [
     ("GET", "/notes", None),
     ("POST", "/notes", {"title": "Should never be written"}),
+    ("GET", "/tags", None),
 ]
 
 
