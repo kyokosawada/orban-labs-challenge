@@ -138,6 +138,26 @@ def test_a_deleted_note_is_still_gone_after_a_restart(client, build_client):
         assert restarted.get(f"/notes/{invoice['id']}").status_code == 404
 
 
+PROBES = ["Invoice", "invoice", "March", "work", ""]
+
+
+def test_no_documented_filter_brings_a_deleted_note_back_into_the_listing(client):
+    invoice = create_note(
+        client, title="Invoice for March", body="Send it before Friday", tags=["work"]
+    )
+    delete_note(client, invoice)
+
+    listing = client.get("/openapi.json").json()["paths"]["/notes"]["get"]
+
+    for parameter in listing.get("parameters", []):
+        for probe in PROBES:
+            response = client.get("/notes", params={parameter["name"]: probe})
+            if response.status_code == 200:
+                assert invoice["id"] not in [note["id"] for note in response.json()]
+            else:
+                assert response.status_code == 422, response.text
+
+
 def test_no_published_address_offers_a_way_back_to_a_deleted_note(client):
     schema = client.get("/openapi.json").json()
 
