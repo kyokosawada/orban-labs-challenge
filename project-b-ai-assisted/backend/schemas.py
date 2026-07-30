@@ -20,6 +20,11 @@ DESTINATION_DESCRIPTION = (
     f"{DESTINATION_MAX_LENGTH} characters once surrounding spaces are removed."
 )
 
+STORED_DESTINATION_DESCRIPTION = (
+    "The web address this Short Link sends someone to, exactly as it was "
+    "supplied. It is never altered after creation."
+)
+
 SUBMITTED_EXPIRES_AT_DESCRIPTION = (
     "Optional moment after which the Short Link stops resolving. It must carry "
     "a timezone offset and be in the future. Leave it out and the Short Link "
@@ -92,7 +97,7 @@ class ShortLink(BaseModel):
     model_config = ConfigDict(json_schema_extra={"example": SHORT_LINK_EXAMPLE})
 
     short_code: Annotated[str, Field(description=SHORT_CODE_DESCRIPTION)]
-    destination: Annotated[str, Field(description=DESTINATION_DESCRIPTION)]
+    destination: Annotated[str, Field(description=STORED_DESTINATION_DESCRIPTION)]
     created_at: Annotated[datetime, Field(description=CREATED_AT_DESCRIPTION)]
     expires_at: Annotated[datetime | None, Field(description=EXPIRES_AT_DESCRIPTION)]
     clicks: Annotated[int, Field(description=CLICKS_DESCRIPTION)]

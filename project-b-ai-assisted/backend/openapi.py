@@ -3,9 +3,11 @@ from typing import Any
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 
-FRAMEWORK_VALIDATION_SCHEMAS = ("HTTPValidationError", "ValidationError")
+FRAMEWORK_VALIDATION_ERROR = "HTTPValidationError"
 
-_FRAMEWORK_VALIDATION_REF = f"#/components/schemas/{FRAMEWORK_VALIDATION_SCHEMAS[0]}"
+FRAMEWORK_VALIDATION_SCHEMAS = (FRAMEWORK_VALIDATION_ERROR, "ValidationError")
+
+_FRAMEWORK_VALIDATION_REF = f"#/components/schemas/{FRAMEWORK_VALIDATION_ERROR}"
 
 
 def _is_the_framework_validation_shape(response: dict[str, Any]) -> bool:

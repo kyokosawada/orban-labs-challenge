@@ -155,8 +155,10 @@ An expired Short Link and a Short Code that was never created answer identically
 so nobody can probe which Short Codes exist. The interface cannot tell them apart either.
 
 The root of the API belongs to Short Codes: `GET /{short_code}` matches any single path
-segment. API endpoints stay reachable because they carry a hyphen, which a Short Code drawn
-from an alphanumeric alphabet never contains. A new endpoint has to be hyphenated too.
+segment. `/short-links` stays reachable because it carries a hyphen, which a Short Code drawn
+from an alphanumeric alphabet never contains, so a new endpoint has to be hyphenated too. The
+documentation paths are safe for a different reason: `/docs` and `/redoc` are shorter than a
+Short Code and `/openapi.json` carries a dot, so none of them can ever be minted.
 
 ## If it does not work
 
