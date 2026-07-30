@@ -8,9 +8,8 @@ across.
 
 - [Notes](./project-a-manual/CONTEXT.md) - a personal note store, written and found again by
   text or label.
-
-Project B, the URL shortener, has not been designed yet. Its context is added here when it
-is.
+- [URL Shortening](./project-b-ai-assisted/CONTEXT.md) - trades long web addresses for short
+  ones, resolves them, and counts how often each is followed.
 
 ## Relationships
 

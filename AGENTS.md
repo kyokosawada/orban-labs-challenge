@@ -1,4 +1,4 @@
-# Orban Labs Backend Developer Challenge
+# Notes API and URL shortener
 
 ## Agent skills
 
@@ -20,8 +20,8 @@ Multi-context: `CONTEXT-MAP.md` at the root points to one `CONTEXT.md` per proje
 
 ## Project A (`project-a-manual/`)
 
-`backend/` and `tests/` are named by the Orban submission form, which validates the
-layout on submit. Do not rename either.
+`backend/` is the importable package holding the service, and `tests/` sits beside it
+rather than inside it, so imports read `from backend.config import ...`.
 
 The spec is `docs/spec.md` and the decisions binding on it are `docs/adr/` plus the
 repo-wide `docs/adr/`. Honour them rather than re-deciding; the ADRs record what was
