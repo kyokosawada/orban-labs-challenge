@@ -8,10 +8,18 @@ from .errors import register_error_handlers
 from .routes import router, tags_router
 
 DESCRIPTION = """
-A store for Notes. Every endpoint requires an `X-API-Key` header.
+A store for Notes. Every endpoint that reads or writes a Note requires an
+`X-API-Key` header.
+
+This documentation does not. `/docs`, `/redoc` and `/openapi.json` answer without a
+key, because they describe the shape of the API and carry no stored Note. ADR 0005
+records why.
 
 Every failure, whatever its cause, returns the same envelope: a machine-readable
 `code`, a human-readable `message`, and an optional per-field `fields` list.
+
+Listing and searching are the same endpoint: `GET /notes` takes an optional `q` and
+an optional `tag`, and narrows by both together when both are given.
 """
 
 
