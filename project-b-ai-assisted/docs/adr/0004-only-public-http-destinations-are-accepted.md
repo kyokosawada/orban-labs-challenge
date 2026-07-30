@@ -19,3 +19,8 @@ whether anything is actually there.
 Anyone running this on their own machine cannot shorten a `localhost` link, which is
 irritating in precisely the setting where it is first tried. That is the intended behaviour
 rather than a defect, and the setup guide says so.
+
+Refusing to make a network request means names are not resolved either, so the address rules
+reach literal addresses and the reserved name `localhost` and nothing else. A name that
+resolves to a private address is accepted. Closing that gap needs a lookup at creation time,
+which is the thing this decision refuses to do, so it stays open deliberately.
