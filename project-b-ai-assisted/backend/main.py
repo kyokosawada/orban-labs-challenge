@@ -10,8 +10,11 @@ from .routes import redirect_router, short_links_router
 DESCRIPTION = """
 A store that trades a Destination for a Short Code.
 
-Creating a Short Link requires an `X-API-Key` header. Following one requires
-nothing, which is the entire point of it.
+Creating a Short Link requires an `X-API-Key` header, and listing them requires
+the same. Following one requires nothing, which is the entire point of it.
+
+This page and the schema behind it need no key. They describe the shapes the
+service accepts and answers with, and carry no Short Link anyone created.
 
 Every API failure returns the same envelope: a machine-readable `code`, a
 human-readable `message`, and an optional per-field `fields` list. The redirect
