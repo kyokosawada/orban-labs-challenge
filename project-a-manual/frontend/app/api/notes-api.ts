@@ -3,7 +3,7 @@ import type { ErrorEnvelope } from "../errors";
 
 const DEFAULT_API_URL = "http://127.0.0.1:8000";
 
-function envelope(
+function failureResponse(
   status: number,
   code: string,
   message: string,
@@ -17,7 +17,7 @@ export async function forwardToApi(
 ): Promise<NextResponse> {
   const apiKey = process.env.NOTES_API_KEY;
   if (!apiKey) {
-    return envelope(
+    return failureResponse(
       500,
       "configuration_error",
       "This server has no NOTES_API_KEY configured, so it cannot reach the Notes API.",
@@ -37,7 +37,7 @@ export async function forwardToApi(
       cache: "no-store",
     });
   } catch {
-    return envelope(
+    return failureResponse(
       502,
       "api_unreachable",
       `The Notes API at ${baseUrl} did not answer. Check that it is running.`,

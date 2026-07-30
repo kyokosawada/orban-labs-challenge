@@ -76,6 +76,39 @@ def test_every_failure_shares_one_envelope(client, anonymous_client):
         assert "detail" not in error
 
 
+def test_a_body_that_is_not_json_names_the_body_rather_than_an_offset(client):
+    response = client.post(
+        "/notes",
+        content="{not json at all",
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["fields"] == [
+        {"field": "body", "message": "The request body is not valid JSON."}
+    ]
+
+
+def test_an_unhandled_failure_returns_the_same_envelope(client, api_key):
+    from fastapi.testclient import TestClient
+
+    from backend.config import API_KEY_HEADER
+    from backend.db import get_connection
+
+    def unavailable_storage():
+        raise RuntimeError("storage is unavailable")
+
+    client.app.dependency_overrides[get_connection] = unavailable_storage
+    with TestClient(client.app, raise_server_exceptions=False) as tolerant:
+        response = tolerant.get("/notes", headers={API_KEY_HEADER: api_key})
+
+    assert response.status_code == 500
+    assert response.json() == {
+        "code": "internal_error",
+        "message": "The server could not complete the request.",
+    }
+
+
 def test_the_published_schema_documents_the_error_envelope(client):
     schema = client.get("/openapi.json").json()
 
