@@ -19,6 +19,13 @@ class ShortCodeUnavailable(RuntimeError):
     pass
 
 
+_SELECT_BY_SHORT_CODE = f"""
+    SELECT {_SHORT_LINK_COLUMNS}
+    FROM short_links
+    WHERE short_code = ?
+"""
+
+
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -48,3 +55,10 @@ def create_short_link(
     raise ShortCodeUnavailable(
         f"No free Short Code was found in {SHORT_CODE_ATTEMPTS} attempts."
     )
+
+
+def find_short_link(
+    connection: sqlite3.Connection, short_code: str
+) -> ShortLink | None:
+    row = connection.execute(_SELECT_BY_SHORT_CODE, (short_code,)).fetchone()
+    return _to_short_link(row) if row is not None else None

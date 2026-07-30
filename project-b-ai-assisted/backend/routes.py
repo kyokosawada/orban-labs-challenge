@@ -1,6 +1,7 @@
 import sqlite3
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Response, status
+from fastapi.responses import PlainTextResponse, RedirectResponse
 from typing_extensions import Annotated
 
 from . import repository
@@ -45,3 +46,35 @@ def create_short_link(
             CODE_SHORT_CODE_UNAVAILABLE,
             "No Short Code could be minted just now. Try again.",
         ) from exhausted
+
+
+redirect_router = APIRouter(tags=["redirect"])
+
+
+@redirect_router.get(
+    "/{short_code}",
+    status_code=status.HTTP_302_FOUND,
+    response_class=RedirectResponse,
+    summary="Follow a Short Link to its Destination",
+    responses={
+        status.HTTP_302_FOUND: {
+            "description": "The Destination is in the Location header.",
+            "content": None,
+        },
+        status.HTTP_404_NOT_FOUND: {
+            "description": "No Short Link resolves for that Short Code.",
+            "content": {"text/plain": {}},
+        },
+    },
+)
+def follow_short_link(short_code: str, connection: Connection) -> Response:
+    short_link = repository.find_short_link(connection, short_code)
+    if short_link is None:
+        return PlainTextResponse(
+            "No Short Link here.", status_code=status.HTTP_404_NOT_FOUND
+        )
+    return RedirectResponse(
+        short_link.destination,
+        status_code=status.HTTP_302_FOUND,
+        headers={"Cache-Control": "no-store"},
+    )
