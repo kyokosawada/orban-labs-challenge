@@ -1,3 +1,4 @@
+from tests.test_expiry import AN_HOUR, moment, shorten_until
 from tests.test_short_links import A_DESTINATION, shorten
 from tests.test_stats import list_short_links
 
@@ -44,6 +45,17 @@ def test_an_unknown_short_code_counts_nothing(client):
     listed = list_short_links(client)
     assert [link["short_code"] for link in listed] == [created["short_code"]]
     assert listed[0]["clicks"] == 0
+
+
+def test_an_expired_short_link_takes_no_further_clicks(client, scripted_clock):
+    expiry = moment(AN_HOUR)
+    created = shorten_until(client, expiry.isoformat()).json()
+    client.get(f"/{created['short_code']}")
+
+    scripted_clock(client, expiry + AN_HOUR)
+
+    assert client.get(f"/{created['short_code']}").status_code == 404
+    assert clicks_on(client, created["short_code"]) == 1
 
 
 def test_two_short_links_to_one_destination_count_independently(client):
