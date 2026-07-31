@@ -29,8 +29,9 @@ Four things were left out, uniformly, to keep the file readable:
 - **Harness bookkeeping.** 42 records of skill definitions, system reminders, hook output
   and background-task notifications injected by Claude Code rather than written by either party.
 
-Absolute paths were rewritten: the worktree the session ran in appears as `<repo>` and the home
-directory as `~`. Nothing else in the text was changed.
+Absolute paths were rewritten: the worktree the session ran in appears as `<repo>`, the home
+directory as `~`, and Claude Code's own scratch directory as `<task-output>`. Nothing else in
+the text was changed.
 
 ---
 
@@ -225,7 +226,7 @@ Frontend builds. Now an end-to-end check in a real browser.
 ```text
 Bash  cd <repo>/project-a-manual && NOTES_API_KEY=local-e2e-key NOTES_DATABASE_PATH=/tmp/orban-a-edit-e2e.db .venv/bin/python -m uvicorn backend.main:app --port 8137 2>&1 | tail -20
 Bash  NOTES_API_URL=http://127.0.0.1:8137 NOTES_API_KEY=local-e2e-key npm run start -- -p 3137 2>&1 | tail -20
-Bash  cat "/tmp/claude-1000/-home-gcpaps--treehouse-orban-labs-challenge-241d8a-2-orban-labs-challenge/b955a98c-bea7-4249-a5bb-249e1a1dacd4/tasks/b53j1ulzc.output"; echo "=== NEXT ==="; cat "/tmp/claude-1000/-home-gcpaps--treehouse-orban-labs-challenge-241d8a-2-orban-labs-challenge/b955a98c-bea7-4249-a5bb ...
+Bash  cat "<task-output>/b955a98c-bea7-4249-a5bb-249e1a1dacd4/tasks/b53j1ulzc.output"; echo "=== NEXT ==="; cat "<task-output>/b955a98c-bea7-4249-a5bb-249e1a1dacd4/tasks/berlihina.output"
 ```
 
 **Assistant**
@@ -338,7 +339,7 @@ Verifying the stranded-filter fix end to end:
 Bash  cd <repo>/project-a-manual && rm -f /tmp/orban-a-edit-e2e.db && NOTES_API_KEY=local-e2e-key NOTES_DATABASE_PATH=/tmp/orban-a-edit-e2e.db .venv/bin/python -m uvicorn backend.main:app --port 8421
 Bash  NOTES_API_URL=http://127.0.0.1:8421 NOTES_API_KEY=local-e2e-key npm run start -- -p 3421
 Bash  sleep 3; curl -s -X POST http://127.0.0.1:3421/api/notes -H 'Content-Type: application/json' -d '{"title":"Invoice","body":"Due Friday","tags":["finance"]}' >/dev/null; curl -s -X POST http://127.0.0.1:3421/api/notes -H 'Content-Type: application/json' -d '{"title":"Standup","tags":["work"]}' >/dev/ ...
-Bash  cat "/tmp/claude-1000/-home-gcpaps--treehouse-orban-labs-challenge-241d8a-2-orban-labs-challenge/b955a98c-bea7-4249-a5bb-249e1a1dacd4/tasks/bzllovrtk.output" | head -20
+Bash  cat "<task-output>/b955a98c-bea7-4249-a5bb-249e1a1dacd4/tasks/bzllovrtk.output" | head -20
 Bash  pid=$(ss -lptn "sport = :3421" 2>/dev/null | grep -oP 'pid=\K[0-9]+' | head -1); echo "next pid: $pid"; [ -n "$pid" ] && kill "$pid"; sleep 2; ss -lptn "sport = :3421" | tail -2
 Bash  NOTES_API_URL=http://127.0.0.1:8421 NOTES_API_KEY=local-e2e-key npm run start -- -p 3421
 Bash  sleep 4; curl -s -o /dev/null -w "web:%{http_code}\n" http://127.0.0.1:3421/; chrome-devtools-axi open http://127.0.0.1:3421/ 2>&1 | grep -E 'button "finance"|button "Edit|button "All' | head

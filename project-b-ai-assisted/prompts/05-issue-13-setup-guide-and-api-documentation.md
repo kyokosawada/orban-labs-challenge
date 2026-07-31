@@ -29,8 +29,11 @@ Four things were left out, uniformly, to keep the file readable:
 - **Harness bookkeeping.** 39 records of skill definitions, system reminders, hook output
   and background-task notifications injected by Claude Code rather than written by either party.
 
-Absolute paths were rewritten: the worktree the session ran in appears as `<repo>` and the home
-directory as `~`. Nothing else in the text was changed.
+Absolute paths were rewritten: the worktree the session ran in appears as `<repo>`, the home
+directory as `~`, and Claude Code's own scratch directory as `<task-output>`. Nothing else in
+the text was changed. The em dashes below are the ones the session typed. The
+repository's own prose avoids them, and rewriting them here would make the fidelity claim
+above untrue, so they stand.
 
 ---
 
@@ -145,25 +148,25 @@ Bash  for f in frontend/app/api/short-links/route.ts frontend/app/api/shortener-
 Bash  cat -n tests/conftest.py; echo "===== test_configuration.py"; cat -n tests/test_configuration.py; echo "===== test_auth.py"; cat -n tests/test_auth.py
 Bash  python3 -m venv .venv && .venv/bin/pip install --quiet -r requirements-dev.txt && echo INSTALLED && .venv/bin/python -c "import sys; print(sys.version)"
 Bash  for f in frontend/app/shorten-view.tsx frontend/app/dashboard-view.tsx frontend/app/errors.ts frontend/app/short-link.ts frontend/app/layout.tsx; do echo "===== $f"; cat -n "$f"; done
-Bash  cat /tmp/claude-1000/-home-gcpaps--treehouse-orban-labs-challenge-241d8a-1-orban-labs-challenge/a42c481a-ba45-495c-b137-273eb76a6aea/tasks/bbsmkwqpe.output
+Bash  cat <task-output>/a42c481a-ba45-495c-b137-273eb76a6aea/tasks/bbsmkwqpe.output
 Bash  ls .venv/bin/python && .venv/bin/python -c "import fastapi,pytest,httpx,sys;print(sys.version.split()[0], fastapi.__version__)"
 Bash  SHORTENER_API_KEY=x .venv/bin/python -c " import json from backend.main import create_app s = create_app().openapi() print(json.dumps(s, indent=2)) " > /tmp/openapi.json; wc -l /tmp/openapi.json; cat /tmp/openapi.json
 Bash  grep -n "http422\|Validation Error" .venv/lib/python3.12/site-packages/fastapi/openapi/utils.py | head -30
 Bash  sed -n 300,420p .venv/lib/python3.12/site-packages/fastapi/openapi/utils.py
 Bash  .venv/bin/python -m pytest 2>&1 | tail -5; echo "=== node"; node --version; npm --version
 Bash  mkdir -p /tmp/walkb && cd /tmp/walkb && rm -f short_links.db; SHORTENER_API_KEY=walkthrough-key-not-a-real-secret SHORTENER_DATABASE_PATH=/tmp/walkb/short_links.db .venv/bin/python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
-Bash  cat /tmp/claude-1000/-home-gcpaps--treehouse-orban-labs-challenge-241d8a-1-orban-labs-challenge/a42c481a-ba45-495c-b137-273eb76a6aea/tasks/be6qkdcbb.output
+Bash  cat <task-output>/a42c481a-ba45-495c-b137-273eb76a6aea/tasks/be6qkdcbb.output
 Bash  cd <repo> && ls -a && echo "=== gitignore files" && find . -name ".gitignore" -not -path "*/node_modules/*" && echo "=== status" && git status --short | head
 Bash  cat .gitignore
 Bash  cd <repo>/project-b-ai-assisted && SHORTENER_API_KEY=walkthrough-key-not-a-real-secret .venv/bin/python -m uvicorn backend.main:app --port 8000
-Bash  sleep 3; cat /tmp/claude-1000/-home-gcpaps--treehouse-orban-labs-challenge-241d8a-1-orban-labs-challenge/a42c481a-ba45-495c-b137-273eb76a6aea/tasks/bzzup092r.output
+Bash  sleep 3; cat <task-output>/a42c481a-ba45-495c-b137-273eb76a6aea/tasks/bzzup092r.output
 Bash  cd /tmp K=walkthrough-key-not-a-real-secret echo "--- create" curl -s -i -X POST http://127.0.0.1:8000/short-links -H "X-API-Key: $K" -H 'Content-Type: application/json' -d '{"destination":"https://example.com/a/genuinely/long/address?with=query"}' | head -20 echo; echo "--- create without key" curl ...
 Bash  K=walkthrough-key-not-a-real-secret echo "--- follow (no redirect chase)" curl -s -i -o - --max-redirs 0 "http://127.0.0.1:8000/WZ4CwHr" | head -8 echo; echo "--- unknown code" curl -s -i "http://127.0.0.1:8000/nosuch" | head -6 echo; echo "--- clicks after one follow" curl -s http://127.0.0.1:8000/ ...
 Bash  cd project-b-ai-assisted/frontend && npm install 2>&1 | tail -5
 Bash  cd project-b-ai-assisted/frontend && printf 'SHORTENER_API_URL=http://127.0.0.1:8000\nSHORTENER_API_KEY=walkthrough-key-not-a-real-secret\nSHORTENER_PUBLIC_BASE_URL=http://127.0.0.1:8000\n' > .env.local && cat .env.local && npm run dev
-Bash  sleep 12; cat /tmp/claude-1000/-home-gcpaps--treehouse-orban-labs-challenge-241d8a-1-orban-labs-challenge/a42c481a-ba45-495c-b137-273eb76a6aea/tasks/b0zo0uc4f.output
+Bash  sleep 12; cat <task-output>/a42c481a-ba45-495c-b137-273eb76a6aea/tasks/b0zo0uc4f.output
 Bash  printf 'SHORTENER_API_URL=http://127.0.0.1:8000\nSHORTENER_API_KEY=walkthrough-key-not-a-real-secret\nSHORTENER_PUBLIC_BASE_URL=http://127.0.0.1:8000\n' > .env.local && npm run dev
-Bash  sleep 12; cat /tmp/claude-1000/-home-gcpaps--treehouse-orban-labs-challenge-241d8a-1-orban-labs-challenge/a42c481a-ba45-495c-b137-273eb76a6aea/tasks/b13qda1qf.output; pwd
+Bash  sleep 12; cat <task-output>/a42c481a-ba45-495c-b137-273eb76a6aea/tasks/b13qda1qf.output; pwd
 Bash  chrome-devtools-axi open http://localhost:3000 2>&1 | tail -40
 Bash  chrome-devtools-axi fill @g389:1_6 "https://www.example.com/some/very/long/address/that/nobody/wants/to/paste?utm_source=newsletter" 2>&1 | tail -5
 Bash  chrome-devtools-axi snapshot 2>&1 | grep -E "textbox|button \"Shorten\"|Short link|StaticText \"No short" | head
@@ -228,14 +231,14 @@ Bash  cd <repo>/project-b-ai-assisted && rm -rf .venv frontend/node_modules fron
 Bash  set -e cd <repo>/project-b-ai-assisted python3 -m venv .venv .venv/bin/pip install -r requirements-dev.txt > /tmp/pip.log 2>&1 || { tail -5 /tmp/pip.log; exit 1; } echo "--- pytest" .venv/bin/python -m pytest 2>&1 | tail -3
 Bash  cd <repo>/project-b-ai-assisted cp .env.example .env KEY=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))") python3 - "$KEY" <<'PY' import sys, pathlib path = pathlib.Path(".env") path.write_text(path.read_text().replace("replace-with-a-long-random-string", sys.argv[1])) PY cat .env ec ...
 Bash  set -a; . ./.env; set +a; .venv/bin/python -m uvicorn backend.main:app --reload
-Bash  sleep 5; cat /tmp/claude-1000/-home-gcpaps--treehouse-orban-labs-challenge-241d8a-1-orban-labs-challenge/a42c481a-ba45-495c-b137-273eb76a6aea/tasks/bdjyaa1k3.output; ls -a | grep db
+Bash  sleep 5; cat <task-output>/a42c481a-ba45-495c-b137-273eb76a6aea/tasks/bdjyaa1k3.output; ls -a | grep db
 Bash  cd <repo>/project-b-ai-assisted/frontend && npm install > /tmp/npm.log 2>&1; tail -3 /tmp/npm.log; cp .env.example .env.local; python3 - <<'PY' import pathlib, re key = re.search(r"SHORTENER_API_KEY=(.+)", pathlib.Path("../.env").read_text()).group(1) path = pathlib.Path(".env.local") path.write_tex ...
 Bash  npm run dev
-Bash  sleep 15; cat /tmp/claude-1000/-home-gcpaps--treehouse-orban-labs-challenge-241d8a-1-orban-labs-challenge/a42c481a-ba45-495c-b137-273eb76a6aea/tasks/b07gc2fgi.output; pwd
+Bash  sleep 15; cat <task-output>/a42c481a-ba45-495c-b137-273eb76a6aea/tasks/b07gc2fgi.output; pwd
 Bash  pkill -f "next-server" ; pkill -f "next dev"; sleep 2; ss -ltnp 2>/dev/null | grep -E ":300[01]" || echo "3000/3001 free"
 Bash  ss -ltnp 2>/dev/null | grep -E ":300[0-9]" ; echo "---"; ps aux | grep -E "next|node" | grep -v grep | head
 Bash  npm run dev
-Bash  sleep 12; grep -E "Local|Ready|Environments" /tmp/claude-1000/-home-gcpaps--treehouse-orban-labs-challenge-241d8a-1-orban-labs-challenge/a42c481a-ba45-495c-b137-273eb76a6aea/tasks/bv5npt8pt.output
+Bash  sleep 12; grep -E "Local|Ready|Environments" <task-output>/a42c481a-ba45-495c-b137-273eb76a6aea/tasks/bv5npt8pt.output
 ```
 
 **Assistant**
@@ -303,8 +306,8 @@ ToolSearch  select:TaskList,TaskOutput
 TaskList
 TaskOutput  standards-review@session-a42c481a
 ToolSearch  select:SendMessage
-Bash        ls -t /tmp/claude-1000/-home-gcpaps--treehouse-orban-labs-challenge-241d8a-1-orban-labs-challenge/a42c481a-ba45-495c-b137-273eb76a6aea/tasks/ | head -20
-Bash        ls -la /tmp/claude-1000/-home-gcpaps--treehouse-orban-labs-challenge-241d8a-1-orban-labs-challenge/a42c481a-ba45-495c-b137-273eb76a6aea/tasks/bpsiccnff.output
+Bash        ls -t <task-output>/a42c481a-ba45-495c-b137-273eb76a6aea/tasks/ | head -20
+Bash        ls -la <task-output>/a42c481a-ba45-495c-b137-273eb76a6aea/tasks/bpsiccnff.output
 Bash        until [ -f /tmp/never-3 ]; do sleep 15; done
 Bash        until [ -f /tmp/never-4 ]; do sleep 5; done
 ```

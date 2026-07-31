@@ -29,8 +29,11 @@ Four things were left out, uniformly, to keep the file readable:
 - **Harness bookkeeping.** 59 records of skill definitions, system reminders, hook output
   and background-task notifications injected by Claude Code rather than written by either party.
 
-Absolute paths were rewritten: the worktree the session ran in appears as `<repo>` and the home
-directory as `~`. Nothing else in the text was changed.
+Absolute paths were rewritten: the worktree the session ran in appears as `<repo>`, the home
+directory as `~`, and Claude Code's own scratch directory as `<task-output>`. Nothing else in
+the text was changed. The em dashes below are the ones the session typed. The
+repository's own prose avoids them, and rewriting them here would make the fidelity claim
+above untrue, so they stand.
 
 ---
 
@@ -312,7 +315,7 @@ Bash   python3 -m venv .venv && .venv/bin/pip install -q -r requirements-dev.txt
 Structure correction acknowledged. Let me check that background job first, then restructure.
 
 ```text
-Bash  cat /tmp/claude-1000/-home-gcpaps--treehouse-orban-labs-challenge-241d8a-1-orban-labs-challenge/2283aa68-18ea-4f60-8499-870311c8a53b/tasks/b19g24ebo.output 2>&1 | tail -20; echo "--- root contents ---"; ls -a
+Bash  cat <task-output>/2283aa68-18ea-4f60-8499-870311c8a53b/tasks/b19g24ebo.output 2>&1 | tail -20; echo "--- root contents ---"; ls -a
 ```
 
 **Assistant**

@@ -29,8 +29,11 @@ Four things were left out, uniformly, to keep the file readable:
 - **Harness bookkeeping.** 50 records of skill definitions, system reminders, hook output
   and background-task notifications injected by Claude Code rather than written by either party.
 
-Absolute paths were rewritten: the worktree the session ran in appears as `<repo>` and the home
-directory as `~`. Nothing else in the text was changed.
+Absolute paths were rewritten: the worktree the session ran in appears as `<repo>`, the home
+directory as `~`, and Claude Code's own scratch directory as `<task-output>`. Nothing else in
+the text was changed. The em dashes below are the ones the session typed. The
+repository's own prose avoids them, and rewriting them here would make the fidelity claim
+above untrue, so they stand.
 
 ---
 
@@ -622,7 +625,7 @@ The agents aren't registered as stoppable tasks, so I can't poll them directly. 
 
 ```text
 Bash  until [ -f /tmp/never-exists-marker-5 ]; do sleep 30; done
-Bash  ls -la /tmp/claude-1000/-home-gcpaps--treehouse-orban-labs-challenge-241d8a-2-orban-labs-challenge/8d3b983d-bed5-4845-aebb-b8e43a22153b/tasks/ 2>/dev/null | tail -20
+Bash  ls -la <task-output>/8d3b983d-bed5-4845-aebb-b8e43a22153b/tasks/ 2>/dev/null | tail -20
 ```
 
 **Assistant**
