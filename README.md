@@ -16,8 +16,8 @@ I understand this may disqualify me. I'd rather be disqualified for something tr
 
 Two projects, built to the structure the brief specifies.
 
-- `project-a-manual/` - Notes API. Write a Note with a title, a body and any Tags, see them listed, narrow the list by a keyword or a Tag or both, and edit or delete any of them. FastAPI over SQLite with the SQL written by hand, an API key required on every endpoint that touches a Note, and a Next.js interface that proxies every call so the key never reaches a browser.
-- `project-b-ai-assisted/` - URL shortener. Mint a Short Code for a Destination, follow it, and see on a dashboard how many Clicks each has taken. Destinations that are not public `http` or `https` addresses are refused, and a Short Link can carry an expiry after which it stops resolving. Here the API serves the redirect itself and Next.js serves only the creation form and the dashboard, which is the opposite arrangement to Project A and is argued out in that project's ADR 0001.
+- `project-a-manual/` - Notes API. Write a Note with a title, a body and any Tags. See them listed, narrow the list by a keyword or a Tag or both, and edit or delete any of them. FastAPI over SQLite with the SQL written by hand. Every endpoint that touches a Note requires an API key, and the Next.js interface proxies every call so that key never reaches a browser.
+- `project-b-ai-assisted/` - URL shortener. Mint a Short Code for a Destination, follow it, and see on a dashboard how many Clicks each has taken. Destinations that are not public `http` or `https` addresses are refused. A Short Link can carry an expiry, after which it stops resolving. Here the API serves the redirect itself and Next.js serves only the creation form and the dashboard. That is the opposite arrangement to Project A, and `project-b-ai-assisted/docs/adr/0001-the-api-serves-the-redirect-directly.md` argues it out.
 - `resume.pdf`
 
 Each project has its own `docs/` with the spec and the decisions behind it, `prompts/` with the session transcripts and the models used, and a `README.md` that takes you from a clean machine to both processes running.
