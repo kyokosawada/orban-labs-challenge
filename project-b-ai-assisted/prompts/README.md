@@ -76,7 +76,10 @@ checked against:
 - [`docs/adr/0001-hand-written-sql-instead-of-an-orm.md`](../../docs/adr/0001-hand-written-sql-instead-of-an-orm.md), repository-wide
 - [`docs/adr/`](../docs/adr/) 0001 to 0004
 
-Those files were committed in one commit, `a242798`, before any code in this project existed.
+This project's share of them, the glossary, the spec and ADRs 0001 to 0004, was committed in
+one commit, `a242798`, before any code in this project existed. The context map and the
+repository-wide ADR came earlier, in `126ed35`, alongside Project A's half of the same
+conversation.
 
 ### What that conversation settled
 
@@ -102,8 +105,8 @@ It settled five decisions before any code, each recorded with the options that l
   This is deliberately the reverse of Project A. Project A's proxy exists to keep an API key
   out of a browser, and a redirect carries no key, so here the hop would cost latency on the
   only latency-sensitive path and would hand the root namespace to page routes.
-- Shortening the same URL twice mints a second code rather than returning the first, because
-  merging them merges click counts the caller deliberately kept apart.
+- Shortening the same URL twice mints a second Short Code rather than returning the first,
+  because merging them merges Clicks the caller deliberately kept apart.
 - Expiry is optional, and an expired Short Code answers exactly as an unknown one does. Saying
   "expired" would confirm that a code was once real and let anyone probe the space.
 - Only public `http` and `https` destinations are accepted. A redirector that accepts anything
@@ -131,7 +134,11 @@ Four of this project's eight ADRs were argued out during the work:
 - ADR 0008, the schema publishes only the responses the service can answer, also during ticket
   #13, after the generated schema was found to advertise a `422` the redirect cannot reach.
 
-The spec was also amended during ticket #11, in commit `c815a73`, to close the address rules
-over the forms of an address a browser reads the same way.
+Two of the pre-code decisions were also amended during a ticket. ADR 0004 gained the paragraph
+admitting what the address rules do not reach, in commit `5d97d5b` during ticket #11: no name
+is resolved, so a hostname pointing at a private address is accepted, and closing that gap
+would need the lookup the decision refuses to make. The spec was amended in the same session,
+in commit `c815a73`, to close the address rules over the forms of an address a browser reads
+the same way.
 
 All of those arguments are in the transcripts in this folder, in full.
